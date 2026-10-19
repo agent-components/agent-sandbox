@@ -100,7 +100,7 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## Agent 如何和这个沙箱交互
 
-Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 `chrome-cdp` 启动，entrypoint / monitor 会 `playwright-cli attach`）。
+Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 `chrome-cdp` 启动，entrypoint / monitor 会 `playwright-cli attach`）。`chrome-cdp` 默认 `--start-maximized`（并配合 VNC 几何 `1280x800` 的 `--window-size`），便于 `:9333` CDP 画面占满窗口；外观 seed 只同步主题/书签栏等，不改窗口状态。
 
 以下示例容器名与上文「运行」一致：`sandbox-desktop-test`。
 

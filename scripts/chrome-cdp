@@ -5,4 +5,6 @@ exec /usr/bin/google-chrome-stable \
   --remote-debugging-port=9222 \
   --remote-debugging-address=127.0.0.1 \
   --remote-allow-origins=* \
+  --start-maximized \
+  --window-size=1280,800 \
   "$@"
