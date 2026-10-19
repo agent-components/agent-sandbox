@@ -1,4 +1,4 @@
-# sandbox-desktop 0.0.1（约 1.63GB）
+# sandbox-desktop 0.0.1（约 1.71GB）
 
 ## 问题与能力
 
@@ -154,7 +154,51 @@ docker exec sandbox-desktop-test bash -lc '
 
 ### 截图
 
-镜像**未**安装 `scrot`、`gnome-screenshot`、ImageMagick `import`、`xfce4-screenshooter` 等桌面截图包。截取浏览器页面请用已安装的 `playwright-cli screenshot`（经 CDP，对应当前页或元素）：
+#### 桌面截图（整屏 XFCE / `DISPLAY=:1`）
+
+镜像已安装 `scrot`。截取整个桌面：
+
+```bash
+docker exec -e DISPLAY=:1 <容器> scrot /tmp/desktop.png
+# 例：
+docker exec -e DISPLAY=:1 sandbox-desktop-test scrot /tmp/desktop.png
+# 拷到宿主机：
+docker cp sandbox-desktop-test:/tmp/desktop.png ./desktop.png
+```
+
+也可继续用人眼/自动化走 noVNC（`:6080`）或 `chrome-cdp-view` MJPEG（`:9333`）看画面。
+
+#### 桌面点击 / 键鼠（xdotool）
+
+镜像已安装 `xdotool`。在 `DISPLAY=:1` 上模拟鼠标与键盘（整桌面，不经 CDP）：
+
+```bash
+# 移动并左键点击（坐标相对桌面）
+docker exec -e DISPLAY=:1 <容器> xdotool mousemove 640 400 click 1
+# 例：
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 640 400 click 1
+
+# 双击 / 右键
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 200 120 click --repeat 2 1
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 200 120 click 3
+
+# 输入文字 / 按键
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool type 'hello'
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool key Return
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool key ctrl+l
+
+# 查窗口并激活后点击（示例：按名称）
+docker exec -e DISPLAY=:1 sandbox-desktop-test bash -lc '
+  wid=$(xdotool search --name "Chrome" | head -1)
+  [ -n "$wid" ] && xdotool windowactivate "$wid" mousemove --window "$wid" 100 100 click 1
+'
+```
+
+浏览器页内精准点击仍优先 `playwright-cli click`（CDP）；整桌面/非 Chrome 窗口用 `xdotool`。
+
+#### 浏览器页面截图（CDP / playwright-cli）
+
+截取浏览器页面请用已安装的 `playwright-cli screenshot`（经 CDP，对应当前页或元素）：
 
 ```bash
 docker exec sandbox-desktop-test bash -lc '
@@ -171,8 +215,6 @@ docker exec sandbox-desktop-test bash -lc '
   playwright-cli screenshot e3 --filename=/home/workspace/el.png
 '
 ```
-
-整桌面画面请用人眼/自动化走 noVNC（`:6080`）或 `chrome-cdp-view` MJPEG（`:9333`），不要假设容器内有 X11 截屏命令。
 
 ## 日志
 

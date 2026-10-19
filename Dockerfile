@@ -38,6 +38,8 @@ RUN set -eux; \
         xz-utils \
         openssh-client openssh-server \
         fonts-wqy-zenhei \
+        scrot \
+        xdotool \
         tzdata \
       && break; \
       echo "apt install failed (try $i), retrying..."; \
