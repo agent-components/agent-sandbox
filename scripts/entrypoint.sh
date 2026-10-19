@@ -21,23 +21,25 @@ stop_port() {
 
 prepare_novnc_web() {
     local web_root="$HOME/.vnc/novnc-web"
-    local token_js item
+    local item
     rm -rf "$web_root"
     mkdir -p "$web_root"
     for item in /usr/share/novnc/*; do
         ln -s "$item" "$web_root/$(basename "$item")"
     done
-    token_js=$(printf '%s' "$NOVNC_TOKEN" | sed 's/\\/\\\\/g; s/"/\\"/g')
-    cat > "$web_root/index.html" << EOFINNER
+    # Do NOT embed NOVNC_TOKEN in anonymously downloadable HTML/JS.
+    # WebSocket still requires TokenFile; client must supply token in path.
+    cat > "$web_root/index.html" << 'EOFINNER'
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <title>Desktop</title>
   <script>
-    const token = "${token_js}";
-    const path = "websockify?token=" + encodeURIComponent(token);
-    location.replace("vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=" + encodeURIComponent(path));
+    // Redirect without token. Set Settings → path to:
+    //   websockify?token=YOUR_NOVNC_TOKEN
+    // or open vnc_lite.html with path=websockify%3Ftoken%3D...
+    location.replace("vnc_lite.html?reconnect=1&resize=scale&path=" + encodeURIComponent("websockify"));
   </script>
 </head>
 <body></body>

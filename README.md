@@ -6,7 +6,7 @@
 
 能力概览：
 
-- 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`，token 登录）
+- 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`；WebSocket 需自行提供 token，静态页不嵌入）
 - 浏览器：`google-chrome-stable`，经 `chrome-cdp` 固定 CDP profile（`127.0.0.1:9222`，**不**映射到宿主机，无 socat）
 - Chrome 画面：`chrome-cdp-view` MJPEG（`:9333`，需 token；可加 `click=1` 映射鼠标到 CDP）
 - 运行时：Node 24、`playwright-cli`；轻量中文字体 `fonts-wqy-zenhei`
@@ -75,7 +75,7 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 
 | 端口 | 用途 |
 |------|------|
-| 6080 | noVNC HTTPS（根路径带 token 跳转） |
+| 6080 | noVNC HTTPS（根路径跳转 vnc_lite，**不**带 token；WebSocket 需自行填 token） |
 | 9333 | chrome-cdp-view MJPEG（需 `?token=`） |
 
 CDP 不映射到宿主机。调试：
@@ -87,6 +87,11 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 ## 访问
 
 - 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行）
+  - 根路径会跳到 `vnc_lite.html`，**不会**在 URL/静态页里嵌入 `NOVNC_TOKEN`
+  - 连接前在 noVNC Settings 把 **path** 设为：`websockify?token=你的NOVNC_TOKEN`，再 Connect
+  - 或手动打开（自行替换 token）：
+    `https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token`
+  - websockify 仍用 TokenFile 校验；未带正确 token 时 WebSocket 会失败
 - Chrome 画面: http://127.0.0.1:9333/?token=local-cdp-token
 - 可点击操作（映射到 CDP `Input.dispatchMouseEvent`）: 加 `&click=1` 或 `&interactive=1`
   例: http://127.0.0.1:9333/?token=local-cdp-token&click=1
