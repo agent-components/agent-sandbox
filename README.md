@@ -44,6 +44,18 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 
 运行时必须传入 `NOVNC_TOKEN` 与 `CDP_VIEW_TOKEN`。
 
+## 环境变量
+
+运行时由 `docker run -e` 传入；镜像**不**内置默认/随机登录 token。
+
+| 变量 | 必需 | 说明 |
+|------|------|------|
+| `NOVNC_TOKEN` | 是 | noVNC 登录 token；缺则 entrypoint 报错退出 |
+| `CDP_VIEW_TOKEN` | 是 | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出 |
+| `TZ` | 否 | 时区；镜像默认 `Asia/Shanghai`，可按需覆盖 |
+
+镜像内已设、一般无需改的变量：`HOME=/home/sandbox`、`USER=sandbox`、`DISPLAY=:1`、`LANG=C.UTF-8`，以及 `PATH`（含 `~/.local/bin` 与 Node 24）。
+
 ## 端口
 
 | 端口 | 用途 |
@@ -66,8 +78,24 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## 日志
 
+以下假设容器名为 `sandbox-desktop-test`（与上文「运行」一致）。
+
+查看容器标准输出/错误（entrypoint 主日志）：
+
 ```bash
 docker logs sandbox-desktop-test
+docker logs -f sandbox-desktop-test                 # 持续跟进
+docker logs --tail 100 sandbox-desktop-test         # 最近 100 行
+docker logs -f --tail 200 sandbox-desktop-test      # 跟进且先看最近 200 行
+```
+
+容器内自有日志（entrypoint 将后台进程输出重定向到文件）：
+
+```bash
+# Chrome CDP（含 monitor 重启时的追加输出）
 docker exec sandbox-desktop-test cat /home/sandbox/.config/chrome-cdp.log
+# chrome-cdp-view（9333）
 docker exec sandbox-desktop-test cat /home/sandbox/.config/cdp-view.log
+# noVNC / websockify（端口 6080）
+docker exec sandbox-desktop-test cat /home/sandbox/.vnc/novnc-6080.log
 ```
