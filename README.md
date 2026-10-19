@@ -75,11 +75,12 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 
 | 端口 | 用途 |
 |------|------|
+| 5901 | TigerVNC（**仅**容器内 `localhost`，entrypoint 以 `-localhost yes` 启动；不要 `-p 5901:5901`） |
 | 6080 | noVNC HTTPS（根路径跳转 vnc_lite，**不**带 token；WebSocket 需自行填 token） |
 | 9222 | Chrome CDP（**仅**容器内 `127.0.0.1`；默认不要 `-p` 映射到宿主机，公网更不要 `-p 9222:9222`） |
 | 9333 | chrome-cdp-view MJPEG（需 `?token=`） |
 
-9222 只供容器内进程（playwright-cli / cdp-view）使用。调试：
+安全：5901 只在容器内环回监听，对外只暴露 **6080 + TokenFile token**（及可选的 9333）。9222 只供容器内进程（playwright-cli / cdp-view）使用。调试：
 
 ```bash
 docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
