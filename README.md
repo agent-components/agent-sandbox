@@ -98,6 +98,82 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 - 可点击操作（映射到 CDP `Input.dispatchMouseEvent`）: 加 `&click=1` 或 `&interactive=1`
   例: http://127.0.0.1:9333/?token=local-cdp-token&click=1
 
+## Agent 如何和这个沙箱交互
+
+Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 `chrome-cdp` 启动，entrypoint / monitor 会 `playwright-cli attach`）。
+
+以下示例容器名与上文「运行」一致：`sandbox-desktop-test`。
+
+### 进入容器执行命令
+
+```bash
+# 交互 shell（用户 sandbox，WORKDIR 已是 /home/workspace）
+docker exec -it sandbox-desktop-test bash
+
+# 单条命令（非交互）
+docker exec sandbox-desktop-test bash -lc 'pwd; echo DISPLAY=$DISPLAY'
+# 期望：/home/workspace 与 :1
+```
+
+确认 CDP 存活（仅容器内环回）：
+
+```bash
+docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
+```
+
+### 用 playwright-cli 做浏览器自动化（CDP 9222）
+
+镜像已装 `@playwright/cli`（命令 `playwright-cli`）。入口启动 Chrome 后会执行：
+
+`playwright-cli attach --cdp=http://127.0.0.1:9222`
+
+若会话断开或需重新挂上：
+
+```bash
+docker exec sandbox-desktop-test bash -lc '
+  export PATH="/home/sandbox/.local/bin:$PATH"
+  playwright-cli detach >/dev/null 2>&1 || true
+  playwright-cli attach --cdp=http://127.0.0.1:9222
+'
+```
+
+常用操作（均在容器内、已 attach 的前提下）：
+
+```bash
+docker exec sandbox-desktop-test bash -lc '
+  export PATH="/home/sandbox/.local/bin:$PATH"
+  playwright-cli goto https://example.com
+  playwright-cli snapshot
+  playwright-cli click e3          # e3 来自 snapshot 的 ref
+  playwright-cli type "hello"
+  playwright-cli press Enter
+'
+```
+
+桌面面板「Web Browser」与默认浏览器也指向 `chrome-cdp`（同一 CDP profile / `:9222`），与 `playwright-cli` 操作的是同一 Chrome。
+
+### 截图
+
+镜像**未**安装 `scrot`、`gnome-screenshot`、ImageMagick `import`、`xfce4-screenshooter` 等桌面截图包。截取浏览器页面请用已安装的 `playwright-cli screenshot`（经 CDP，对应当前页或元素）：
+
+```bash
+docker exec sandbox-desktop-test bash -lc '
+  export PATH="/home/sandbox/.local/bin:$PATH"
+  # 当前视口 → 默认 page-{timestamp}.png
+  playwright-cli screenshot
+  # 指定文件与格式
+  playwright-cli screenshot --filename=/home/workspace/shot.png
+  playwright-cli screenshot --filename=/home/workspace/shot.jpeg --type=jpeg
+  # 整页滚动截图 / 高分屏像素
+  playwright-cli screenshot --full-page --filename=/home/workspace/full.png
+  playwright-cli screenshot --hires --filename=/home/workspace/hires.png
+  # 元素：先 snapshot 拿 ref，再截该元素
+  playwright-cli screenshot e3 --filename=/home/workspace/el.png
+'
+```
+
+整桌面画面请用人眼/自动化走 noVNC（`:6080`）或 `chrome-cdp-view` MJPEG（`:9333`），不要假设容器内有 X11 截屏命令。
+
 ## 日志
 
 以下假设容器名为 `sandbox-desktop-test`（与上文「运行」一致）。
