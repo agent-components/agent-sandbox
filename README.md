@@ -65,17 +65,6 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 - 可点击操作（映射到 CDP `Input.dispatchMouseEvent`）: 加 `&click=1` 或 `&interactive=1`
   例: http://127.0.0.1:9333/?token=local-cdp-token&click=1
 
-## 相对旧本地 Dockerfile 的调整
-
-- 用户名 **`apm`**（home `/home/apm`）；面板/桌面快捷指向 `/home/workspace`
-- VNC `-desktop Desktop`（标题不带主机名/用户名）
-- 补轻量中文字体 `fonts-wqy-zenhei`
-- **无** socat；**无** 镜像内默认 token
-- EXPOSE 仅 **6080 8080 9333**
-- Node 装到 `~/.local/node-v24`
-
-保留：`openssh-client/openssh-server`（入口不启动 sshd）。
-
 ## 日志
 
 ```bash
