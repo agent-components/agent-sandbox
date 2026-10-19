@@ -1,4 +1,4 @@
-# sandbox-desktop
+# sandbox-desktop 0.0.1（约 1.63GB）
 
 ## 问题与能力
 
