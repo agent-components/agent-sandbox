@@ -1,21 +1,28 @@
 # local/sandbox-desktop:0.1.0
 
-本地桌面镜像（对齐 boat 沙箱能力布局）。可见身份为 **sandbox**，工作目录 **WORKDIR=/home/workspace**。
+## 问题与能力
 
-- OS: Debian trixie；用户 `sandbox`（uid 1000，home `/home/sandbox`）
-- **WORKDIR `/home/workspace`**：仅给后续 git 仓库代码，不放脚本/配置
-- 脚本布局:
-  - `/home/sandbox/project/entrypoint.sh`
-  - `/home/sandbox/.local/bin/{chrome-cdp,chrome-cdp-view.mjs,start-novnc.sh,node,…}`
-  - `/home/sandbox/.vnc/xstartup`（并写入 `~/.config/tigervnc/xstartup`，本地 trixie TigerVNC 1.15）
-- 桌面: XFCE + TigerVNC + noVNC + websockify + google-chrome-stable
-- 轻量 CJK: `fonts-wqy-zenhei`（无完整 fonts-noto-cjk）
-- **无** socat（CDP 仅绑 `127.0.0.1:9222`）
-- Node 24 在 `~/.local/node-v24`；`playwright-cli` 已装
-- 面板 directorymenu / 文件快捷默认打开 `/home/workspace`；VNC desktop 名固定为 `Desktop`
-- XFCE 默认 Web Browser / 面板浏览器 launcher 指向 `/home/sandbox/.local/bin/chrome-cdp`（`--user-data-dir=~/.config/google-chrome-cdp`，`--remote-debugging-port=9222`），避免再开默认 profile
-- CDP profile 外观对齐 `~/.config/google-chrome`：启动前同步 Preferences 中主题/侧栏等外观键；首次可从正常 profile 复制非会话 Preferences/Local State。面板与默认浏览器仍走 chrome-cdp（可点 CDP）
-- **登录 token 仅运行时环境变量**：`NOVNC_TOKEN`、`CDP_VIEW_TOKEN`（镜像不内置默认/随机 token；缺则入口报错退出）
+需要一个**可本地构建、带图形桌面的 Linux 容器**：浏览器里看桌面（noVNC）、用带 CDP 的 Chrome 做自动化/调试，并可选把 Chrome 画面以 MJPEG 流出（可点击）。本镜像提供这些能力，身份为用户 `sandbox`（uid 1000），业务代码工作目录为 `/home/workspace`。
+
+能力概览：
+
+- 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`，token 登录）
+- 浏览器：`google-chrome-stable`，经 `chrome-cdp` 固定 CDP profile（`127.0.0.1:9222`，**不**映射到宿主机，无 socat）
+- Chrome 画面：`chrome-cdp-view` MJPEG（`:9333`，需 token；可加 `click=1` 映射鼠标到 CDP）
+- 运行时：Node 24、`playwright-cli`；轻量中文字体 `fonts-wqy-zenhei`
+- 登录 token **仅**运行时环境变量 `NOVNC_TOKEN`、`CDP_VIEW_TOKEN`（镜像不内置默认/随机值；缺则入口报错退出）
+
+## 目录介绍
+
+| 路径 | 用途 |
+|------|------|
+| `Dockerfile` | 镜像构建定义（Debian trixie、桌面组件、Chrome、入口脚本安装） |
+| `README.md` | 本说明：能力、目录、构建与运行 |
+| `scripts/` | 镜像内脚本源文件（由 Dockerfile 拷入容器）：`entrypoint.sh`、`chrome-cdp`、`chrome-cdp-view.mjs`、`chrome-cdp-monitor.sh`、`start-novnc.sh`、`xstartup`、`xfce-seed` 等 |
+| `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
+| `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |
+
+容器内对应布局：入口 `/home/sandbox/project/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。
 
 ## 构建
 
