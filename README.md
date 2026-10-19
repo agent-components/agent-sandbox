@@ -18,7 +18,14 @@
 |------|------|
 | `Dockerfile` | 镜像构建定义（Debian trixie、桌面组件、Chrome、入口脚本安装） |
 | `README.md` | 本说明：能力、目录、构建与运行 |
-| `scripts/` | 镜像内脚本源文件（由 Dockerfile 拷入容器）：`entrypoint.sh`、`chrome-cdp`、`chrome-cdp-view.mjs`、`chrome-cdp-monitor.sh`、`start-novnc.sh`、`xstartup`、`xfce-seed` 等 |
+| `scripts/entrypoint.sh` | 容器入口：校验 token、拉起 VNC/XFCE、Chrome CDP、cdp-view 与 monitor |
+| `scripts/chrome-cdp` | Chrome 启动包装：固定 CDP profile 与 `127.0.0.1:9222` |
+| `scripts/chrome-cdp-view.mjs` | `:9333` MJPEG 流出 Chrome 画面；可选 `click` 映射鼠标到 CDP |
+| `scripts/chrome-cdp-monitor.sh` | 周期探测 CDP；挂了则重启 Chrome 并 re-attach `playwright-cli` |
+| `scripts/seed-chrome-cdp-appearance.py` | 启动前把外观相关偏好从普通 Chrome profile 同步到 CDP profile |
+| `scripts/start-novnc.sh` | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080` |
+| `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4` |
+| `scripts/xfce-seed/` | XFCE 面板/默认浏览器/mime 等种子配置（Web Browser → `chrome-cdp`） |
 | `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
 | `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |
 
