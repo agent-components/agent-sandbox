@@ -1,0 +1,10 @@
+[Default Applications]
+text/html=chrome-cdp.desktop
+x-scheme-handler/http=chrome-cdp.desktop
+x-scheme-handler/https=chrome-cdp.desktop
+application/xhtml+xml=chrome-cdp.desktop
+
+[Added Associations]
+text/html=chrome-cdp.desktop;
+x-scheme-handler/http=chrome-cdp.desktop;
+x-scheme-handler/https=chrome-cdp.desktop;
