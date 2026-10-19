@@ -1,12 +1,12 @@
-# Local desktop image aligned with boat sandbox layout, username apm (uid 1000).
+# Local desktop image aligned with boat sandbox layout, username sandbox (uid 1000).
 # Build: docker build --platform linux/amd64 -t local/sandbox-desktop:0.1.0 .
 FROM debian:trixie-slim
 
 ARG TARGETARCH
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
-    HOME=/home/apm \
-    USER=apm \
+    HOME=/home/sandbox \
+    USER=sandbox \
     DISPLAY=:1 \
     TZ=Asia/Shanghai
 
@@ -66,63 +66,63 @@ RUN set -eux; \
       > /usr/bin/google-chrome-stable; \
     chmod 755 /usr/bin/google-chrome-stable
 
-# apm user uid 1000; WORKDIR tree /home/workspace (code only)
-RUN useradd -m -u 1000 -s /bin/bash apm \
-    && mkdir -p /home/apm/.vnc \
-               /home/apm/.config/tigervnc \
-               /home/apm/.local/bin \
-               /home/apm/.config \
-               /home/apm/project \
-               /home/apm/Desktop \
+# sandbox user uid 1000; WORKDIR tree /home/workspace (code only)
+RUN useradd -m -u 1000 -s /bin/bash sandbox \
+    && mkdir -p /home/sandbox/.vnc \
+               /home/sandbox/.config/tigervnc \
+               /home/sandbox/.local/bin \
+               /home/sandbox/.config \
+               /home/sandbox/project \
+               /home/sandbox/Desktop \
                /home/workspace \
-    && chown -R apm:apm /home/apm /home/workspace
+    && chown -R sandbox:sandbox /home/sandbox /home/workspace
 
 # Node 24 under ~/.local/node-v24 + bin symlinks
-USER apm
-WORKDIR /home/apm
+USER sandbox
+WORKDIR /home/sandbox
 RUN set -eux; \
     NODE_VER=v24.22.0; \
     curl -fsSL "https://npmmirror.com/mirrors/node/${NODE_VER}/node-${NODE_VER}-linux-x64.tar.xz" \
       -o /tmp/node.tar.xz; \
-    mkdir -p /home/apm/.local/node-v24; \
-    tar -xJf /tmp/node.tar.xz -C /home/apm/.local/node-v24 --strip-components=1; \
+    mkdir -p /home/sandbox/.local/node-v24; \
+    tar -xJf /tmp/node.tar.xz -C /home/sandbox/.local/node-v24 --strip-components=1; \
     rm /tmp/node.tar.xz; \
-    ln -sf /home/apm/.local/node-v24/bin/node /home/apm/.local/bin/node; \
-    ln -sf /home/apm/.local/node-v24/bin/npm /home/apm/.local/bin/npm; \
-    ln -sf /home/apm/.local/node-v24/bin/npx /home/apm/.local/bin/npx; \
-    export PATH="/home/apm/.local/bin:$PATH"; \
+    ln -sf /home/sandbox/.local/node-v24/bin/node /home/sandbox/.local/bin/node; \
+    ln -sf /home/sandbox/.local/node-v24/bin/npm /home/sandbox/.local/bin/npm; \
+    ln -sf /home/sandbox/.local/node-v24/bin/npx /home/sandbox/.local/bin/npx; \
+    export PATH="/home/sandbox/.local/bin:$PATH"; \
     npm i -g @playwright/cli; \
-    ln -sf /home/apm/.local/node-v24/bin/playwright-cli /home/apm/.local/bin/playwright-cli || true; \
-    test -x /home/apm/.local/bin/playwright-cli \
-      || test -x /home/apm/.local/node-v24/bin/playwright-cli; \
+    ln -sf /home/sandbox/.local/node-v24/bin/playwright-cli /home/sandbox/.local/bin/playwright-cli || true; \
+    test -x /home/sandbox/.local/bin/playwright-cli \
+      || test -x /home/sandbox/.local/node-v24/bin/playwright-cli; \
     node --version; npm --version; \
-    command -v playwright-cli || ls -la /home/apm/.local/node-v24/bin/
+    command -v playwright-cli || ls -la /home/sandbox/.local/node-v24/bin/
 
 USER root
-COPY --chown=apm:apm scripts/entrypoint.sh /home/apm/project/entrypoint.sh
-COPY --chown=apm:apm scripts/chrome-cdp /home/apm/.local/bin/chrome-cdp
-COPY --chown=apm:apm scripts/seed-chrome-cdp-appearance.py /home/apm/.local/bin/seed-chrome-cdp-appearance.py
-COPY --chown=apm:apm scripts/chrome-cdp-monitor.sh /home/apm/.local/bin/chrome-cdp-monitor.sh
-COPY --chown=apm:apm scripts/chrome-cdp-view.mjs /home/apm/.local/bin/chrome-cdp-view.mjs
-COPY --chown=apm:apm scripts/start-novnc.sh /home/apm/.local/bin/start-novnc.sh
+COPY --chown=sandbox:sandbox scripts/entrypoint.sh /home/sandbox/project/entrypoint.sh
+COPY --chown=sandbox:sandbox scripts/chrome-cdp /home/sandbox/.local/bin/chrome-cdp
+COPY --chown=sandbox:sandbox scripts/seed-chrome-cdp-appearance.py /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py
+COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/bin/chrome-cdp-monitor.sh
+COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
+COPY --chown=sandbox:sandbox scripts/start-novnc.sh /home/sandbox/.local/bin/start-novnc.sh
 # TigerVNC 1.15 (trixie) reads ~/.config/tigervnc; keep both paths.
-COPY --chown=apm:apm scripts/xstartup /home/apm/.vnc/xstartup
-COPY --chown=apm:apm scripts/xstartup /home/apm/.config/tigervnc/xstartup
+COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.vnc/xstartup
+COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.config/tigervnc/xstartup
 # xfce-seed: panel/helpers point Web Browser -> ~/.local/bin/chrome-cdp (CDP profile)
-COPY --chown=apm:apm scripts/xfce-seed/ /home/apm/.config/xfce-seed/
+COPY --chown=sandbox:sandbox scripts/xfce-seed/ /home/sandbox/.config/xfce-seed/
 
-RUN chmod 755 /home/apm/project/entrypoint.sh \
-              /home/apm/.local/bin/chrome-cdp \
-              /home/apm/.local/bin/seed-chrome-cdp-appearance.py \
-              /home/apm/.local/bin/chrome-cdp-monitor.sh \
-              /home/apm/.local/bin/chrome-cdp-view.mjs \
-              /home/apm/.local/bin/start-novnc.sh \
-              /home/apm/.vnc/xstartup \
-              /home/apm/.config/tigervnc/xstartup
+RUN chmod 755 /home/sandbox/project/entrypoint.sh \
+              /home/sandbox/.local/bin/chrome-cdp \
+              /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py \
+              /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
+              /home/sandbox/.local/bin/chrome-cdp-view.mjs \
+              /home/sandbox/.local/bin/start-novnc.sh \
+              /home/sandbox/.vnc/xstartup \
+              /home/sandbox/.config/tigervnc/xstartup
 
 EXPOSE 6080 9333
 
-USER apm
+USER sandbox
 WORKDIR /home/workspace
-ENV PATH="/home/apm/.local/bin:/home/apm/.local/node-v24/bin:${PATH}"
-ENTRYPOINT ["/home/apm/project/entrypoint.sh"]
+ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:${PATH}"
+ENTRYPOINT ["/home/sandbox/project/entrypoint.sh"]

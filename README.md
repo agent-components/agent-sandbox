@@ -1,19 +1,19 @@
 # local/sandbox-desktop:0.1.0
 
-本地桌面镜像（对齐 boat 沙箱能力布局）。可见身份为 **apm**，工作目录 **WORKDIR=/home/workspace**。
+本地桌面镜像（对齐 boat 沙箱能力布局）。可见身份为 **sandbox**，工作目录 **WORKDIR=/home/workspace**。
 
-- OS: Debian trixie；用户 `apm`（uid 1000，home `/home/apm`）
+- OS: Debian trixie；用户 `sandbox`（uid 1000，home `/home/sandbox`）
 - **WORKDIR `/home/workspace`**：仅给后续 git 仓库代码，不放脚本/配置
 - 脚本布局:
-  - `/home/apm/project/entrypoint.sh`
-  - `/home/apm/.local/bin/{chrome-cdp,chrome-cdp-view.mjs,start-novnc.sh,node,…}`
-  - `/home/apm/.vnc/xstartup`（并写入 `~/.config/tigervnc/xstartup`，本地 trixie TigerVNC 1.15）
+  - `/home/sandbox/project/entrypoint.sh`
+  - `/home/sandbox/.local/bin/{chrome-cdp,chrome-cdp-view.mjs,start-novnc.sh,node,…}`
+  - `/home/sandbox/.vnc/xstartup`（并写入 `~/.config/tigervnc/xstartup`，本地 trixie TigerVNC 1.15）
 - 桌面: XFCE + TigerVNC + noVNC + websockify + google-chrome-stable
 - 轻量 CJK: `fonts-wqy-zenhei`（无完整 fonts-noto-cjk）
 - **无** socat（CDP 仅绑 `127.0.0.1:9222`）
 - Node 24 在 `~/.local/node-v24`；`playwright-cli` 已装
 - 面板 directorymenu / 文件快捷默认打开 `/home/workspace`；VNC desktop 名固定为 `Desktop`
-- XFCE 默认 Web Browser / 面板浏览器 launcher 指向 `/home/apm/.local/bin/chrome-cdp`（`--user-data-dir=~/.config/google-chrome-cdp`，`--remote-debugging-port=9222`），避免再开默认 profile
+- XFCE 默认 Web Browser / 面板浏览器 launcher 指向 `/home/sandbox/.local/bin/chrome-cdp`（`--user-data-dir=~/.config/google-chrome-cdp`，`--remote-debugging-port=9222`），避免再开默认 profile
 - CDP profile 外观对齐 `~/.config/google-chrome`：启动前同步 Preferences 中主题/侧栏等外观键；首次可从正常 profile 复制非会话 Preferences/Local State。面板与默认浏览器仍走 chrome-cdp（可点 CDP）
 - **登录 token 仅运行时环境变量**：`NOVNC_TOKEN`、`CDP_VIEW_TOKEN`（镜像不内置默认/随机 token；缺则入口报错退出）
 
@@ -68,6 +68,6 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ```bash
 docker logs sandbox-desktop-test
-docker exec sandbox-desktop-test cat /home/apm/.config/chrome-cdp.log
-docker exec sandbox-desktop-test cat /home/apm/.config/cdp-view.log
+docker exec sandbox-desktop-test cat /home/sandbox/.config/chrome-cdp.log
+docker exec sandbox-desktop-test cat /home/sandbox/.config/cdp-view.log
 ```

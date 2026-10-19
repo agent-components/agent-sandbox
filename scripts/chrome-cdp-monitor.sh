@@ -1,6 +1,6 @@
 #!/bin/bash
-export HOME=/home/apm
-export PATH="/home/apm/.local/bin:$PATH"
+export HOME=/home/sandbox
+export PATH="/home/sandbox/.local/bin:$PATH"
 export DISPLAY=:1
 export PLAYWRIGHT_CLI_SESSION=default
 cdp_ready() { curl -fsS --max-time 2 http://127.0.0.1:9222/json/version >/dev/null 2>&1; }

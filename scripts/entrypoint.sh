@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export HOME="${HOME:-/home/apm}"
+export HOME="${HOME:-/home/sandbox}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
