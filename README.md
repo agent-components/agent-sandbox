@@ -6,8 +6,8 @@
 
 能力概览：
 
-- 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`；WebSocket 需自行提供 token，静态页不嵌入）
-- 浏览器：`google-chrome-stable`，经 `chrome-cdp` 固定 CDP profile（`127.0.0.1:9222`，**不**映射到宿主机，无 socat）
+- 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`；WebSocket 需自行提供 token，静态页不嵌入）；分辨率由 `SANDBOX_DISPLAY_WIDTH`/`HEIGHT` 控制，默认 `1920x1080`
+- 浏览器：`google-chrome-stable`，经 `chrome-cdp` 固定 CDP profile（`127.0.0.1:9222`，**不**映射到宿主机，无 socat）；窗口用 `--window-size` 对齐上述分辨率，CDP viewport 同尺寸
 - Chrome 画面：`chrome-cdp-view` MJPEG（`:9333`，需 token；可加 `click=1` 映射鼠标到 CDP）
 - 运行时：Node 24、`playwright-cli`；轻量中文字体 `fonts-wqy-zenhei`
 - 登录 token **仅**运行时环境变量 `NOVNC_TOKEN`、`CDP_VIEW_TOKEN`（镜像不内置默认/随机值；缺则入口报错退出）
@@ -51,6 +51,7 @@ docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
   -e TZ=Asia/Shanghai \
+  # 可选：-e SANDBOX_DISPLAY_WIDTH=1920 -e SANDBOX_DISPLAY_HEIGHT=1080 \
   local/sandbox-desktop:0.1.0
 ```
 
@@ -64,6 +65,8 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 |------|------|------|
 | `NOVNC_TOKEN` | 是 | noVNC 登录 token；缺则 entrypoint 报错退出 |
 | `CDP_VIEW_TOKEN` | 是 | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出 |
+| `SANDBOX_DISPLAY_WIDTH` | 否 | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
+| `SANDBOX_DISPLAY_HEIGHT` | 否 | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上 |
 | `TZ` | 否 | 时区；镜像默认 `Asia/Shanghai`，可按需覆盖 |
 | `HOME` | 否 | 镜像已设为 `/home/sandbox`，一般不用改 |
 | `USER` | 否 | 镜像已设为 `sandbox`，一般不用改 |
@@ -100,7 +103,7 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## Agent 如何和这个沙箱交互
 
-Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 `chrome-cdp` 启动，entrypoint / monitor 会 `playwright-cli attach`）。`chrome-cdp` 默认 `--start-maximized`（并配合 VNC 几何 `1280x800` 的 `--window-size`），便于 `:9333` CDP 画面占满窗口；外观 seed 只同步主题/书签栏等，不改窗口状态。
+Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 `chrome-cdp` 启动，entrypoint / monitor 会 `playwright-cli attach`）。桌面与 Chrome 窗口分辨率由 `SANDBOX_DISPLAY_WIDTH` / `SANDBOX_DISPLAY_HEIGHT` 控制（默认 `1920`×`1080`）：entrypoint 用其对 `vncserver -geometry`，`chrome-cdp` 用 `--window-position=0,0` 与 `--window-size=${W},${H}`（不再依赖仅 `--start-maximized`），使 CDP 看到的 viewport/window 与设定一致；`:9333` screencast 的 max 宽高也读同一组环境变量。外观 seed 只同步主题/书签栏等，不改窗口状态。公开端口仍是 **6080（noVNC）+ 9333（cdp-view）**；5901 / 9222 仅容器内环回。
 
 以下示例容器名与上文「运行」一致：`sandbox-desktop-test`。
 
@@ -174,9 +177,9 @@ docker cp sandbox-desktop-test:/tmp/desktop.png ./desktop.png
 
 ```bash
 # 移动并左键点击（坐标相对桌面）
-docker exec -e DISPLAY=:1 <容器> xdotool mousemove 640 400 click 1
-# 例：
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 640 400 click 1
+docker exec -e DISPLAY=:1 <容器> xdotool mousemove 960 540 click 1
+# 例（默认 1920x1080 中心；若改了 SANDBOX_DISPLAY_* 请按实际分辨率调整）：
+docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 960 540 click 1
 
 # 双击 / 右键
 docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 200 120 click --repeat 2 1

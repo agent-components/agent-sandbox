@@ -4,6 +4,9 @@ export HOME="${HOME:-/home/sandbox}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
+# Desktop / Chrome window size (CDP viewport tracks this). Defaults 1920x1080.
+export SANDBOX_DISPLAY_WIDTH="${SANDBOX_DISPLAY_WIDTH:-1920}"
+export SANDBOX_DISPLAY_HEIGHT="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 
 display_ready() {
     DISPLAY=:1 xdpyinfo >/dev/null 2>&1
@@ -242,7 +245,8 @@ start_desktop() {
             rm -f "$HOME/.config/tigervnc/"*:1.pid
         fi
         # Fixed desktop name: no hostname/username in noVNC title
-        vncserver :1 -localhost yes -geometry 1280x800 -depth 24 \
+        vncserver :1 -localhost yes \
+            -geometry "${SANDBOX_DISPLAY_WIDTH}x${SANDBOX_DISPLAY_HEIGHT}" -depth 24 \
             -SecurityTypes None -desktop Desktop
     fi
 

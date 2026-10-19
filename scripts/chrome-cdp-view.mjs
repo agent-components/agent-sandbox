@@ -99,11 +99,13 @@ async function attach() {
   cdp = ws;
   ws.addEventListener('open', () => {
     send('Page.enable');
+    const maxW = Number(process.env.SANDBOX_DISPLAY_WIDTH || 1920) || 1920;
+    const maxH = Number(process.env.SANDBOX_DISPLAY_HEIGHT || 1080) || 1080;
     send('Page.startScreencast', {
       format: 'jpeg',
       quality: 60,
-      maxWidth: 1280,
-      maxHeight: 800,
+      maxWidth: maxW,
+      maxHeight: maxH,
       everyNthFrame: 1,
     });
   });
