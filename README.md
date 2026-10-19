@@ -53,15 +53,16 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 
 ## 环境变量
 
-运行时由 `docker run -e` 传入；镜像**不**内置默认/随机登录 token。
-
 | 变量 | 必需 | 说明 |
 |------|------|------|
 | `NOVNC_TOKEN` | 是 | noVNC 登录 token；缺则 entrypoint 报错退出 |
 | `CDP_VIEW_TOKEN` | 是 | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出 |
 | `TZ` | 否 | 时区；镜像默认 `Asia/Shanghai`，可按需覆盖 |
-
-镜像内已设、一般无需改的变量：`HOME=/home/sandbox`、`USER=sandbox`、`DISPLAY=:1`、`LANG=C.UTF-8`，以及 `PATH`（含 `~/.local/bin` 与 Node 24）。
+| `HOME` | 否 | 镜像已设为 `/home/sandbox`，一般不用改 |
+| `USER` | 否 | 镜像已设为 `sandbox`，一般不用改 |
+| `DISPLAY` | 否 | 镜像已设为 `:1`，一般不用改 |
+| `LANG` | 否 | 镜像已设为 `C.UTF-8`，一般不用改 |
+| `PATH` | 否 | 镜像已设（含 `~/.local/bin` 与 Node 24），一般不用改 |
 
 ## 端口
 
