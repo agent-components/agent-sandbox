@@ -120,7 +120,7 @@ RUN chmod 755 /home/apm/project/entrypoint.sh \
               /home/apm/.vnc/xstartup \
               /home/apm/.config/tigervnc/xstartup
 
-EXPOSE 6080 8080 9333
+EXPOSE 6080 9333
 
 USER apm
 WORKDIR /home/workspace

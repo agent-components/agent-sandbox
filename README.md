@@ -33,7 +33,7 @@ docker build --platform linux/amd64 -t local/sandbox-desktop:0.1.0 .
 docker rm -f sandbox-desktop-test 2>/dev/null
 docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g \
   --security-opt seccomp=unconfined \
-  -p 6080:6080 -p 8080:8080 -p 9333:9333 \
+  -p 6080:6080 -p 9333:9333 \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
   -e TZ=Asia/Shanghai \
@@ -49,7 +49,6 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 | 端口 | 用途 |
 |------|------|
 | 6080 | noVNC HTTPS（根路径带 token 跳转） |
-| 8080 | noVNC HTTPS（与沙箱 Devbox 公开口一致） |
 | 9333 | chrome-cdp-view MJPEG（需 `?token=`） |
 
 CDP 不映射到宿主机。调试：
@@ -60,7 +59,7 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## 访问
 
-- 桌面: https://127.0.0.1:6080/ 或 https://127.0.0.1:8080/（自签证书需浏览器放行）
+- 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行）
 - Chrome 画面: http://127.0.0.1:9333/?token=local-cdp-token
 - 可点击操作（映射到 CDP `Input.dispatchMouseEvent`）: 加 `&click=1` 或 `&interactive=1`
   例: http://127.0.0.1:9333/?token=local-cdp-token&click=1

@@ -249,9 +249,7 @@ start_desktop() {
     chmod 600 "$token_file"
     prepare_novnc_web
     ensure_tls_cert
-    # 6080 keeps the existing desktop port. 8080 is the Devbox public port.
     start_novnc 6080 "$token_file"
-    start_novnc 8080 "$token_file"
 
     local i
     for i in $(seq 1 30); do
@@ -284,7 +282,7 @@ start_desktop() {
     monitor_chrome_cdp &
     echo $! > "$HOME/.config/chrome-cdp-monitor.pid"
 
-    echo "Public desktop: port 8080 and 6080 (open the site root)"
+    echo "Public desktop: port 6080 (open the site root)"
     echo "Public Chrome view: port 9333"
 }
 
