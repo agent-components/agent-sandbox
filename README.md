@@ -1,4 +1,4 @@
-# local/sandbox-desktop:0.1.0
+# sandbox-desktop
 
 ## 问题与能力
 
