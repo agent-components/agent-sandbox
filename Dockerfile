@@ -62,11 +62,22 @@ RUN set -eux; \
     rm -f /tmp/google-chrome-stable_current_amd64.deb; \
     rm -rf /var/lib/apt/lists/*; \
     google-chrome-stable --version; \
+    # Move install tree off /opt: child images (e.g. billion) bind-mount an empty /opt.
+    mkdir -p /usr/local/google; \
+    mv /opt/google/chrome /usr/local/google/chrome; \
+    rmdir /opt/google 2>/dev/null || true; \
+    # Replace package bin with .real symlink + no-sandbox wrapper.
+    # rm first so printf does not follow a stale symlink into the chrome tree.
+    rm -f /usr/bin/google-chrome-stable /usr/bin/google-chrome-stable.real; \
+    ln -sfn /usr/local/google/chrome/google-chrome /usr/bin/google-chrome-stable.real; \
     # Container/qemu need --no-sandbox; keep scripts/chrome-cdp identical to sandbox.
-    mv /usr/bin/google-chrome-stable /usr/bin/google-chrome-stable.real; \
     printf '%s\n' '#!/bin/sh' 'exec /usr/bin/google-chrome-stable.real --no-sandbox --disable-gpu "$@"' \
       > /usr/bin/google-chrome-stable; \
-    chmod 755 /usr/bin/google-chrome-stable
+    chmod 755 /usr/bin/google-chrome-stable; \
+    # alternatives: google-chrome -> google-chrome-stable (wrapper); desktop Exec uses same.
+    test -x /usr/local/google/chrome/google-chrome; \
+    test -x /usr/bin/google-chrome-stable; \
+    google-chrome-stable --version
 
 # sandbox user uid 1000; WORKDIR tree /home/workspace (code only)
 RUN useradd -m -u 1000 -s /bin/bash sandbox \
@@ -77,7 +88,8 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
                /home/sandbox/project \
                /home/sandbox/Desktop \
                /home/workspace \
-    && chown -R sandbox:sandbox /home/sandbox /home/workspace
+               /opt/downloads \
+    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads
 
 # Node 24 under ~/.local/node-v24 + bin symlinks
 USER sandbox

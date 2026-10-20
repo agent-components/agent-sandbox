@@ -155,6 +155,17 @@ seed_chrome_cdp_appearance() {
     fi
 }
 
+
+# Chrome Default download path is /opt/downloads (prefs seeded below).
+# Create at runtime so a remounted empty /opt still gets the dir when writable.
+prepare_chrome_downloads() {
+    mkdir -p /opt/downloads
+    # Entrypoint runs as sandbox; chown is a no-op when already owned / not root.
+    if [ "$(id -u)" = "0" ]; then
+        chown sandbox:sandbox /opt/downloads 2>/dev/null || true
+    fi
+}
+
 cdp_ready() {
     curl -fsS --max-time 2 http://127.0.0.1:9222/json/version >/dev/null 2>&1
 }
@@ -221,6 +232,7 @@ monitor_chrome_cdp() {
 start_desktop() {
     echo "Starting remote desktop, Chrome, and playwright-cli..."
     mkdir -p "$HOME/.vnc" "$HOME/.config"
+    prepare_chrome_downloads
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
         echo "NOVNC_TOKEN is required" >&2

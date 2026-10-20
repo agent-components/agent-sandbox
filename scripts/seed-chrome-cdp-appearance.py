@@ -7,6 +7,9 @@ c_pref_path = os.path.join(cdp, "Default", "Preferences")
 n_ls = os.path.join(normal, "Local State")
 c_ls = os.path.join(cdp, "Local State")
 
+# Fixed download path (on /opt so empty-volume remounts keep downloads on the persist disk).
+DOWNLOAD_DIR = "/opt/downloads"
+
 def load(p):
     if not os.path.isfile(p):
         return {}
@@ -45,7 +48,24 @@ def deep_del(d, keys):
     if isinstance(cur, dict):
         cur.pop(keys[-1], None)
 
+def pin_download_dir(pref):
+    """Force Default download / save path to DOWNLOAD_DIR. Returns True if changed."""
+    changed = False
+    wanted = [
+        (("download", "default_directory"), DOWNLOAD_DIR),
+        (("download", "directory_upgrade"), True),
+        (("savefile", "default_directory"), DOWNLOAD_DIR),
+    ]
+    for keys, value in wanted:
+        if deep_get(pref, keys, default=Ellipsis) != value:
+            deep_set(pref, keys, value)
+            changed = True
+    return changed
+
 os.makedirs(os.path.join(cdp, "Default"), exist_ok=True)
+os.makedirs(os.path.join(normal, "Default"), exist_ok=True)
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
 if not os.path.isfile(c_pref_path) and os.path.isfile(n_pref_path):
     shutil.copy2(n_pref_path, c_pref_path)
 if not os.path.isfile(c_ls) and os.path.isfile(n_ls):
@@ -92,5 +112,20 @@ else:
         deep_set(c_pref, ("extensions", "theme"), {"system_theme": 0})
         changed = True
 
+# Pin download directory on both profiles (normal UI + CDP).
+n_dl = pin_download_dir(n_pref)
+c_dl = pin_download_dir(c_pref)
+changed = changed or c_dl
+
+save(n_pref_path, n_pref)
 save(c_pref_path, c_pref)
-print("seeded changed=%s theme=%s" % (changed, deep_get(c_pref, ("extensions", "theme"))))
+print(
+    "seeded changed=%s theme=%s download_dir=%s normal_dl=%s cdp_dl=%s"
+    % (
+        changed,
+        deep_get(c_pref, ("extensions", "theme")),
+        DOWNLOAD_DIR,
+        n_dl,
+        c_dl,
+    )
+)
