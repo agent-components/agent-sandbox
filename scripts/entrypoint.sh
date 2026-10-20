@@ -30,6 +30,15 @@ prepare_novnc_web() {
     for item in /usr/share/novnc/*; do
         ln -s "$item" "$web_root/$(basename "$item")"
     done
+    # Hide vnc_lite top bar ("Connected to Desktop" / "Send CtrlAltDel").
+    # Replace the symlink with a patched copy so package files stay untouched.
+    if [ -f /usr/share/novnc/vnc_lite.html ]; then
+        rm -f "$web_root/vnc_lite.html"
+        cp /usr/share/novnc/vnc_lite.html "$web_root/vnc_lite.html"
+        # Insert display:none into the existing #top_bar rule.
+        sed -i 's|#top_bar {|#top_bar { display: none !important;|' \
+            "$web_root/vnc_lite.html"
+    fi
     # Do NOT embed NOVNC_TOKEN in anonymously downloadable HTML/JS.
     # WebSocket still requires TokenFile; client must supply token in path.
     cat > "$web_root/index.html" << 'EOFINNER'

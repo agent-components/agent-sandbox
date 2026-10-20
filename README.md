@@ -91,7 +91,7 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## 访问
 
-- 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行）
+- 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行；`vnc_lite` 已隐藏顶部 Connected/CtrlAltDel 状态栏）
   - 根路径会跳到 `vnc_lite.html`，**不会**在 URL/静态页里嵌入 `NOVNC_TOKEN`
   - 连接前在 noVNC Settings 把 **path** 设为：`websockify?token=你的NOVNC_TOKEN`，再 Connect
   - 或手动打开（自行替换 token）：
