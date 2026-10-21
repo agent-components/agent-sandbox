@@ -1,5 +1,5 @@
 #!/bin/sh
-# Panel launcher: single Chrome CDP window (focus if already open).
+# Panel launcher: single Chrome CDP window (toggle minimize/focus if already open).
 # Google-chrome-cdp is set by chrome-cdp --class=; Google-chrome covers
 # entrypoint windows started before that flag was added.
 exec /home/sandbox/.local/bin/single-instance \

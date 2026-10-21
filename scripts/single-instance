@@ -1,6 +1,11 @@
 #!/bin/sh
-# Focus an existing X11 window by WM_CLASS (and optional title substring);
-# if none matches, exec the given command.
+# Toggle an existing X11 window by WM_CLASS (and optional title substring):
+#   - found + currently active + not minimized → minimize (wmctrl hidden)
+#   - found + minimized or not focused → restore / activate
+#   - none matches → exec the given command
+#
+# When several windows match, prefer the active one (to minimize), else a
+# minimized one, else the first match.
 #
 # Usage:
 #   single-instance --class CLASS [--class CLASS ...] [--title SUBSTR] -- cmd [args...]
@@ -9,8 +14,8 @@
 #
 # Note: Chrome CDP sets WM_CLASS instance to "google-chrome (/opt/...)", which
 # contains spaces — never split wmctrl -lx on whitespace for the class field.
-# Use wmctrl -xa for class-only focus. Multiple --class values are tried in order
-# (e.g. Google-chrome-cdp then Google-chrome during a hot-update transition).
+# Multiple --class values are tried in order (e.g. Google-chrome-cdp then
+# Google-chrome during a hot-update transition).
 set -eu
 
 # Space-separated list of class names (no spaces inside a class name).
@@ -52,36 +57,29 @@ fi
 
 export DISPLAY="${DISPLAY:-:1}"
 
-focus_with_wmctrl() {
-  # $1 = class to try
-  cls="$1"
-  if [ -z "$TITLE" ]; then
-    # Class-only: -xa matches WM_CLASS even when instance has spaces
-    wmctrl -xa "$cls" 2>/dev/null
-    return $?
-  fi
-
-  # Title filter: match ".Class" on the full line, then title substring
-  wid="$(
-    wmctrl -lx 2>/dev/null | awk -v want="$cls" -v twant="$TITLE" '
-      BEGIN { IGNORECASE = 1 }
-      {
-        id = $1
-        if ($0 !~ ("\\." want "[[:space:]]")) next
-        if (index($0, twant) == 0) next
-        print id
-        exit
-      }
-    '
-  )"
-  [ -n "$wid" ] || return 1
-  wmctrl -ia "$wid" 2>/dev/null || wmctrl -i -a "$wid" 2>/dev/null
+# Normalize window ids (0x01600003 vs 0x1600003) for numeric compare.
+wid_dec() {
+  printf '%d' "$1" 2>/dev/null || printf '0'
 }
 
-focus_with_xdotool() {
+# Print all matching window ids (one per line) for a class.
+list_wids_wmctrl() {
+  cls="$1"
+  wmctrl -lx 2>/dev/null | awk -v want="$cls" -v twant="$TITLE" '
+    BEGIN { IGNORECASE = 1 }
+    {
+      id = $1
+      if ($0 !~ ("\\." want "[[:space:]]")) next
+      if (twant != "" && index($0, twant) == 0) next
+      print id
+    }
+  '
+}
+
+list_wids_xdotool() {
   cls="$1"
   ids="$(xdotool search --class "$cls" 2>/dev/null || true)"
-  [ -n "$ids" ] || return 1
+  [ -n "$ids" ] || return 0
   for id in $ids; do
     if [ -n "$TITLE" ]; then
       name="$(xdotool getwmname "$id" 2>/dev/null || true)"
@@ -90,31 +88,126 @@ focus_with_xdotool() {
         *) continue ;;
       esac
     fi
-    xdotool windowactivate "$id" 2>/dev/null || xdotool windowraise "$id" 2>/dev/null || true
-    return 0
+    printf '0x%x\n' "$id"
   done
+}
+
+window_is_hidden() {
+  wid="$1"
+  state="$(xprop -id "$wid" _NET_WM_STATE 2>/dev/null || true)"
+  case "$state" in
+    *_NET_WM_STATE_HIDDEN*) return 0 ;;
+  esac
+  wm_state="$(xprop -id "$wid" WM_STATE 2>/dev/null || true)"
+  case "$wm_state" in
+    *Iconic*) return 0 ;;
+  esac
   return 1
 }
 
-try_focus() {
+# Active window id from root, or empty. Strips trailing comma from xprop.
+active_wid() {
+  xprop -root _NET_ACTIVE_WINDOW 2>/dev/null \
+    | sed -n 's/.*# \(0x[0-9a-fA-F][0-9a-fA-F]*\).*/\1/p' \
+    | head -n 1
+}
+
+window_is_active() {
+  wid="$1"
+  active_raw="$(active_wid)"
+  [ -n "$active_raw" ] || return 1
+  [ "$(wid_dec "$wid")" = "$(wid_dec "$active_raw")" ]
+}
+
+minimize_window() {
+  wid="$1"
   if command -v wmctrl >/dev/null 2>&1; then
-    for cls in $CLASSES; do
-      if focus_with_wmctrl "$cls"; then
-        return 0
-      fi
-    done
+    wmctrl -i -r "$wid" -b add,hidden 2>/dev/null && return 0
   fi
   if command -v xdotool >/dev/null 2>&1; then
-    for cls in $CLASSES; do
-      if focus_with_xdotool "$cls"; then
-        return 0
-      fi
-    done
+    xdotool windowminimize "$(wid_dec "$wid")" 2>/dev/null && return 0
   fi
   return 1
 }
 
-if try_focus; then
+activate_window() {
+  wid="$1"
+  if command -v wmctrl >/dev/null 2>&1; then
+    wmctrl -i -r "$wid" -b remove,hidden 2>/dev/null || true
+    wmctrl -ia "$wid" 2>/dev/null && return 0
+    wmctrl -i -a "$wid" 2>/dev/null && return 0
+  fi
+  if command -v xdotool >/dev/null 2>&1; then
+    xdotool windowactivate "$(wid_dec "$wid")" 2>/dev/null \
+      || xdotool windowraise "$(wid_dec "$wid")" 2>/dev/null \
+      || true
+    return 0
+  fi
+  return 1
+}
+
+# Collect matching wids across all --class values (newline-separated).
+collect_wids() {
+  if command -v wmctrl >/dev/null 2>&1; then
+    for cls in $CLASSES; do
+      list_wids_wmctrl "$cls"
+    done
+  elif command -v xdotool >/dev/null 2>&1; then
+    for cls in $CLASSES; do
+      list_wids_xdotool "$cls"
+    done
+  fi
+}
+
+# Pick which window to toggle:
+#   1) active match → minimize that
+#   2) else a hidden match → restore
+#   3) else first match → activate
+pick_wid() {
+  wids="$(collect_wids | awk 'NF && !seen[$0]++')"
+  [ -n "$wids" ] || return 1
+
+  active_raw="$(active_wid)"
+  active_dec=""
+  if [ -n "$active_raw" ]; then
+    active_dec="$(wid_dec "$active_raw")"
+  fi
+
+  # Prefer active match
+  if [ -n "$active_dec" ] && [ "$active_dec" != "0" ]; then
+    for wid in $wids; do
+      if [ "$(wid_dec "$wid")" = "$active_dec" ]; then
+        printf '%s\n' "$wid"
+        return 0
+      fi
+    done
+  fi
+
+  # Prefer a minimized match
+  for wid in $wids; do
+    if window_is_hidden "$wid"; then
+      printf '%s\n' "$wid"
+      return 0
+    fi
+  done
+
+  # First match
+  printf '%s\n' "$wids" | head -n 1
+}
+
+try_toggle() {
+  wid="$(pick_wid || true)"
+  [ -n "$wid" ] || return 1
+
+  if window_is_hidden "$wid" || ! window_is_active "$wid"; then
+    activate_window "$wid"
+  else
+    minimize_window "$wid"
+  fi
+  return 0
+}
+
+if try_toggle; then
   exit 0
 fi
 

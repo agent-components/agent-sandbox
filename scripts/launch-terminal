@@ -1,5 +1,6 @@
 #!/bin/sh
-# Panel launcher: single xfce4-terminal (focus if already open).
+# Panel launcher: single xfce4-terminal (toggle minimize/focus if already open).
 exec /home/sandbox/.local/bin/single-instance \
+  --class Xfce4-terminal \
   --class xfce4-terminal \
   -- xfce4-terminal "$@"
