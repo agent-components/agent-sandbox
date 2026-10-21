@@ -1,0 +1,5 @@
+#!/bin/sh
+# Panel launcher: single Chrome CDP window (focus if already open).
+exec /home/sandbox/.local/bin/single-instance \
+  --class Google-chrome \
+  -- /home/sandbox/.local/bin/chrome-cdp "$@"

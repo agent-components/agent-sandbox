@@ -1,0 +1,98 @@
+#!/bin/sh
+# Focus an existing X11 window by WM_CLASS (and optional title substring);
+# if none matches, exec the given command.
+#
+# Usage:
+#   single-instance --class CLASS [--title SUBSTR] -- cmd [args...]
+#
+# Prefers wmctrl; falls back to xdotool. DISPLAY defaults to :1.
+set -eu
+
+CLASS=""
+TITLE=""
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --class)
+      CLASS="${2:-}"
+      shift 2
+      ;;
+    --title)
+      TITLE="${2:-}"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "single-instance: unknown option: $1" >&2
+      exit 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ -z "$CLASS" ] || [ $# -eq 0 ]; then
+  echo "usage: single-instance --class CLASS [--title SUBSTR] -- cmd [args...]" >&2
+  exit 2
+fi
+
+export DISPLAY="${DISPLAY:-:1}"
+
+focus_with_wmctrl() {
+  # wmctrl -lx: id desktop instance.Class host title...
+  wid="$(
+    wmctrl -lx 2>/dev/null | awk -v want="$CLASS" -v twant="$TITLE" '
+      {
+        id = $1
+        ic = $3
+        n = split(ic, parts, ".")
+        cls = parts[n]
+        title = ""
+        for (i = 5; i <= NF; i++) {
+          title = title (i > 5 ? " " : "") $i
+        }
+        class_ok = (cls == want || index(ic, want) > 0)
+        title_ok = (twant == "" || index(title, twant) > 0)
+        if (class_ok && title_ok) {
+          print id
+          exit
+        }
+      }
+    '
+  )"
+  [ -n "$wid" ] || return 1
+  wmctrl -ia "$wid" 2>/dev/null || wmctrl -i -a "$wid" 2>/dev/null
+}
+
+focus_with_xdotool() {
+  ids="$(xdotool search --class "$CLASS" 2>/dev/null || true)"
+  [ -n "$ids" ] || return 1
+  for id in $ids; do
+    if [ -n "$TITLE" ]; then
+      name="$(xdotool getwmname "$id" 2>/dev/null || true)"
+      case "$name" in
+        *"$TITLE"*) ;;
+        *) continue ;;
+      esac
+    fi
+    xdotool windowactivate "$id" 2>/dev/null || xdotool windowraise "$id" 2>/dev/null || true
+    return 0
+  done
+  return 1
+}
+
+if command -v wmctrl >/dev/null 2>&1; then
+  if focus_with_wmctrl; then
+    exit 0
+  fi
+elif command -v xdotool >/dev/null 2>&1; then
+  if focus_with_xdotool; then
+    exit 0
+  fi
+fi
+
+exec "$@"

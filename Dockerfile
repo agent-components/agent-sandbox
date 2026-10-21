@@ -40,6 +40,7 @@ RUN set -eux; \
         fonts-wqy-zenhei \
         scrot \
         xdotool \
+        wmctrl \
         tzdata \
       && break; \
       echo "apt install failed (try $i), retrying..."; \
@@ -118,6 +119,10 @@ RUN set -eux; \
 USER root
 COPY --chown=sandbox:sandbox scripts/entrypoint.sh /home/sandbox/project/entrypoint.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp /home/sandbox/.local/bin/chrome-cdp
+COPY --chown=sandbox:sandbox scripts/single-instance /home/sandbox/.local/bin/single-instance
+COPY --chown=sandbox:sandbox scripts/launch-chrome-cdp /home/sandbox/.local/bin/launch-chrome-cdp
+COPY --chown=sandbox:sandbox scripts/launch-terminal /home/sandbox/.local/bin/launch-terminal
+COPY --chown=sandbox:sandbox scripts/launch-workspace /home/sandbox/.local/bin/launch-workspace
 COPY --chown=sandbox:sandbox scripts/seed-chrome-cdp-appearance.py /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/bin/chrome-cdp-monitor.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
@@ -132,6 +137,10 @@ COPY --chown=sandbox:sandbox scripts/novnc/vnc_lite.html /home/sandbox/.local/sh
 
 RUN chmod 755 /home/sandbox/project/entrypoint.sh \
               /home/sandbox/.local/bin/chrome-cdp \
+              /home/sandbox/.local/bin/single-instance \
+              /home/sandbox/.local/bin/launch-chrome-cdp \
+              /home/sandbox/.local/bin/launch-terminal \
+              /home/sandbox/.local/bin/launch-workspace \
               /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py \
               /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
               /home/sandbox/.local/bin/chrome-cdp-view.mjs \

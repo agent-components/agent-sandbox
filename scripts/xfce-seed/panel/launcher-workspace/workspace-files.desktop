@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=thunar /home/workspace
+Exec=/home/sandbox/.local/bin/launch-workspace
 Icon=folder
 StartupNotify=true
 Terminal=false
@@ -9,3 +9,4 @@ Categories=Utility;X-XFCE;X-Xfce-Toplevel;
 OnlyShowIn=XFCE;
 Name=workspace
 Comment=Open /home/workspace
+StartupWMClass=Thunar
