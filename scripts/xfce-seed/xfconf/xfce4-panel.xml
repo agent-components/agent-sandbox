@@ -3,8 +3,9 @@
 <!-- Bottom dock only (no top Applications/clock/user bar).
      Three launchers only: chrome-cdp, xfce4-terminal, workspace files.
      Narrow (length 1% + length-adjust) and bottom-centered (p=12;x=mid).
-     enable-struts=false: do not reserve bottom workarea, so maximized
-     Chrome covers the full screen behind the dock (no black strip).
+     enable-struts=false: do not reserve bottom workarea (full _NET_WORKAREA).
+     Stacking: panel-keep-below.sh demotes DOCK + sets BELOW so maximize /
+     fullscreen paint over the dock (struts alone are not enough).
      Light translucent background (style=color + rgba); capsule shape /
      icon gaps come from gtk-3.0/gtk.css. -->
 <channel name="xfce4-panel" version="1.0">

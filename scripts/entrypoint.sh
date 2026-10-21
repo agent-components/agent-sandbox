@@ -340,6 +340,23 @@ monitor_chrome_cdp() {
     done
 }
 
+
+start_panel_keep_below() {
+    # Dock must sit under maximized/fullscreen clients (see panel-keep-below.sh).
+    if [ -x "$HOME/.local/bin/panel-keep-below.sh" ]; then
+        if [ -f "$HOME/.config/panel-keep-below.pid" ]; then
+            old=$(tr -d "[:space:]" < "$HOME/.config/panel-keep-below.pid" || true)
+            if [ -n "$old" ] && kill -0 "$old" 2>/dev/null; then
+                kill "$old" 2>/dev/null || true
+            fi
+        fi
+        DISPLAY=:1 nohup "$HOME/.local/bin/panel-keep-below.sh" \
+            > "$HOME/.config/panel-keep-below.log" 2>&1 &
+        echo $! > "$HOME/.config/panel-keep-below.pid"
+        DISPLAY=:1 "$HOME/.local/bin/panel-keep-below.sh" --once >/dev/null 2>&1 || true
+    fi
+}
+
 start_desktop() {
     echo "Starting remote desktop, Chrome, and playwright-cli..."
     mkdir -p "$HOME/.vnc" "$HOME/.config"
@@ -385,6 +402,8 @@ start_desktop() {
         DISPLAY=:1 xdpyinfo >/dev/null 2>&1 && break
         sleep 1
     done
+
+    start_panel_keep_below
 
     if ! cdp_ready; then
         start_chrome_cdp

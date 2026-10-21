@@ -125,6 +125,7 @@ COPY --chown=sandbox:sandbox scripts/launch-terminal /home/sandbox/.local/bin/la
 COPY --chown=sandbox:sandbox scripts/launch-workspace /home/sandbox/.local/bin/launch-workspace
 COPY --chown=sandbox:sandbox scripts/seed-chrome-cdp-appearance.py /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/bin/chrome-cdp-monitor.sh
+COPY --chown=sandbox:sandbox scripts/panel-keep-below.sh /home/sandbox/.local/bin/panel-keep-below.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
 COPY --chown=sandbox:sandbox scripts/start-novnc.sh /home/sandbox/.local/bin/start-novnc.sh
 # TigerVNC 1.15 (trixie) reads ~/.config/tigervnc; keep both paths.
@@ -143,6 +144,7 @@ RUN chmod 755 /home/sandbox/project/entrypoint.sh \
               /home/sandbox/.local/bin/launch-workspace \
               /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py \
               /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
+              /home/sandbox/.local/bin/panel-keep-below.sh \
               /home/sandbox/.local/bin/chrome-cdp-view.mjs \
               /home/sandbox/.local/bin/start-novnc.sh \
               /home/sandbox/.vnc/xstartup \
