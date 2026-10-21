@@ -27,7 +27,7 @@
 | `scripts/panel-keep-below.sh` | 将 xfce4-panel 设为 keep-below（取消 dock 置顶层），配合 `enable-struts=false` 让最大化/全屏盖住 dock |
 | `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel` |
 | `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` + `panel-keep-below.sh` 使最大化/全屏盖住 dock） |
-| `scripts/novnc/vnc_lite.html` | 自定义 noVNC lite：隐藏 Connected 条 + 右下角 Clipboard 粘贴同步 |
+| `scripts/novnc/vnc_lite.html` | 自定义 noVNC lite：隐藏 Connected 条；Ctrl/Cmd+V 同步本地剪贴板进桌面 |
 | `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
 | `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |
 
@@ -96,7 +96,7 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 - 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行）
   - 根路径会跳到 `vnc_lite.html`，**不会**在 URL/静态页里嵌入 `NOVNC_TOKEN`
   - **XFCE panel 已关闭**（无 Applications/时钟/用户顶栏与 dock）；Chrome 仍由入口 `chrome-cdp` 自动拉起
-  - **剪贴板**：右下角 `Clipboard` 面板可粘贴文本同步进桌面，再在桌面内 Ctrl+V；或在桌面焦点下直接 Ctrl/Cmd+V（需浏览器剪贴板权限）。noVNC 自带 Connected 状态条也已隐藏
+  - **剪贴板**：桌面焦点下 Ctrl+V 或 Mac Command+V 会把浏览器剪贴板同步进远程桌面并粘贴（需浏览器剪贴板权限；Cmd+V 会转成远程 Ctrl+V）。noVNC 自带 Connected 状态条已隐藏
   - 连接前在 noVNC Settings 把 **path** 设为：`websockify?token=你的NOVNC_TOKEN`，再 Connect
   - 或手动打开（自行替换 token）：
     `https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token`
