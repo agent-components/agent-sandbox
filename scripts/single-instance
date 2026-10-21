@@ -3,22 +3,28 @@
 # if none matches, exec the given command.
 #
 # Usage:
-#   single-instance --class CLASS [--title SUBSTR] -- cmd [args...]
+#   single-instance --class CLASS [--class CLASS ...] [--title SUBSTR] -- cmd [args...]
 #
 # Prefers wmctrl; falls back to xdotool. DISPLAY defaults to :1.
 #
 # Note: Chrome CDP sets WM_CLASS instance to "google-chrome (/opt/...)", which
 # contains spaces — never split wmctrl -lx on whitespace for the class field.
-# Use wmctrl -xa for class-only focus.
+# Use wmctrl -xa for class-only focus. Multiple --class values are tried in order
+# (e.g. Google-chrome-cdp then Google-chrome during a hot-update transition).
 set -eu
 
-CLASS=""
+# Space-separated list of class names (no spaces inside a class name).
+CLASSES=""
 TITLE=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --class)
-      CLASS="${2:-}"
+      if [ -z "${2:-}" ]; then
+        echo "single-instance: --class needs a value" >&2
+        exit 2
+      fi
+      CLASSES="${CLASSES}${CLASSES:+ }$2"
       shift 2
       ;;
     --title)
@@ -39,23 +45,25 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if [ -z "$CLASS" ] || [ $# -eq 0 ]; then
-  echo "usage: single-instance --class CLASS [--title SUBSTR] -- cmd [args...]" >&2
+if [ -z "$CLASSES" ] || [ $# -eq 0 ]; then
+  echo "usage: single-instance --class CLASS [--class CLASS ...] [--title SUBSTR] -- cmd [args...]" >&2
   exit 2
 fi
 
 export DISPLAY="${DISPLAY:-:1}"
 
 focus_with_wmctrl() {
+  # $1 = class to try
+  cls="$1"
   if [ -z "$TITLE" ]; then
     # Class-only: -xa matches WM_CLASS even when instance has spaces
-    wmctrl -xa "$CLASS" 2>/dev/null
+    wmctrl -xa "$cls" 2>/dev/null
     return $?
   fi
 
   # Title filter: match ".Class" on the full line, then title substring
   wid="$(
-    wmctrl -lx 2>/dev/null | awk -v want="$CLASS" -v twant="$TITLE" '
+    wmctrl -lx 2>/dev/null | awk -v want="$cls" -v twant="$TITLE" '
       BEGIN { IGNORECASE = 1 }
       {
         id = $1
@@ -71,7 +79,8 @@ focus_with_wmctrl() {
 }
 
 focus_with_xdotool() {
-  ids="$(xdotool search --class "$CLASS" 2>/dev/null || true)"
+  cls="$1"
+  ids="$(xdotool search --class "$cls" 2>/dev/null || true)"
   [ -n "$ids" ] || return 1
   for id in $ids; do
     if [ -n "$TITLE" ]; then
@@ -87,15 +96,26 @@ focus_with_xdotool() {
   return 1
 }
 
-if command -v wmctrl >/dev/null 2>&1; then
-  if focus_with_wmctrl; then
-    exit 0
+try_focus() {
+  if command -v wmctrl >/dev/null 2>&1; then
+    for cls in $CLASSES; do
+      if focus_with_wmctrl "$cls"; then
+        return 0
+      fi
+    done
   fi
-fi
-if command -v xdotool >/dev/null 2>&1; then
-  if focus_with_xdotool; then
-    exit 0
+  if command -v xdotool >/dev/null 2>&1; then
+    for cls in $CLASSES; do
+      if focus_with_xdotool "$cls"; then
+        return 0
+      fi
+    done
   fi
+  return 1
+}
+
+if try_focus; then
+  exit 0
 fi
 
 exec "$@"

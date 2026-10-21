@@ -1,5 +1,8 @@
 #!/bin/sh
 # Window size must match VNC geometry so CDP viewport equals SANDBOX_DISPLAY_*.
+# --class pins WM_CLASS class to Google-chrome-cdp so panel single-instance can
+# match entrypoint and dock launches without relying on the default
+# "Google-chrome" class (instance still embeds user-data-dir and has spaces).
 W="${SANDBOX_DISPLAY_WIDTH:-1920}"
 H="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 exec /usr/bin/google-chrome-stable \
@@ -10,4 +13,5 @@ exec /usr/bin/google-chrome-stable \
   --remote-allow-origins=* \
   --window-position=0,0 \
   --window-size="${W},${H}" \
+  --class=Google-chrome-cdp \
   "$@"

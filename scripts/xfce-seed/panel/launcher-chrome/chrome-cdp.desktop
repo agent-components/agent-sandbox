@@ -11,4 +11,4 @@ Terminal=false
 StartupNotify=true
 Categories=Network;WebBrowser;
 MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
-StartupWMClass=Google-chrome
+StartupWMClass=Google-chrome-cdp
