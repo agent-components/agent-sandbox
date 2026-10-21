@@ -6,6 +6,10 @@
 #   single-instance --class CLASS [--title SUBSTR] -- cmd [args...]
 #
 # Prefers wmctrl; falls back to xdotool. DISPLAY defaults to :1.
+#
+# Note: Chrome CDP sets WM_CLASS instance to "google-chrome (/opt/...)", which
+# contains spaces — never split wmctrl -lx on whitespace for the class field.
+# Use wmctrl -xa for class-only focus.
 set -eu
 
 CLASS=""
@@ -43,24 +47,22 @@ fi
 export DISPLAY="${DISPLAY:-:1}"
 
 focus_with_wmctrl() {
-  # wmctrl -lx: id desktop instance.Class host title...
+  if [ -z "$TITLE" ]; then
+    # Class-only: -xa matches WM_CLASS even when instance has spaces
+    wmctrl -xa "$CLASS" 2>/dev/null
+    return $?
+  fi
+
+  # Title filter: match ".Class" on the full line, then title substring
   wid="$(
     wmctrl -lx 2>/dev/null | awk -v want="$CLASS" -v twant="$TITLE" '
+      BEGIN { IGNORECASE = 1 }
       {
         id = $1
-        ic = $3
-        n = split(ic, parts, ".")
-        cls = parts[n]
-        title = ""
-        for (i = 5; i <= NF; i++) {
-          title = title (i > 5 ? " " : "") $i
-        }
-        class_ok = (cls == want || index(ic, want) > 0)
-        title_ok = (twant == "" || index(title, twant) > 0)
-        if (class_ok && title_ok) {
-          print id
-          exit
-        }
+        if ($0 !~ ("\\." want "[[:space:]]")) next
+        if (index($0, twant) == 0) next
+        print id
+        exit
       }
     '
   )"
@@ -89,7 +91,8 @@ if command -v wmctrl >/dev/null 2>&1; then
   if focus_with_wmctrl; then
     exit 0
   fi
-elif command -v xdotool >/dev/null 2>&1; then
+fi
+if command -v xdotool >/dev/null 2>&1; then
   if focus_with_xdotool; then
     exit 0
   fi
