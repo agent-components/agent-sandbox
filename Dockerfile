@@ -89,7 +89,8 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
                /home/sandbox/Desktop \
                /home/workspace \
                /opt/downloads \
-    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads
+               /opt/google-chrome-cdp \
+    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp
 
 # Node 24 under ~/.local/node-v24 + bin symlinks
 USER sandbox

@@ -158,7 +158,7 @@ seed_xfce_workspace_ui() {
 # like the confirmed-good UI (classic frame, not GTK system theme), while keeping
 # a separate user-data-dir for remote debugging.
 seed_chrome_cdp_appearance() {
-    mkdir -p "$HOME/.config/google-chrome-cdp/Default"
+    mkdir -p /opt/google-chrome-cdp/Default
     if [ -x "$HOME/.local/bin/seed-chrome-cdp-appearance.py" ] || [ -f "$HOME/.local/bin/seed-chrome-cdp-appearance.py" ]; then
         python3 "$HOME/.local/bin/seed-chrome-cdp-appearance.py" || true
     else
@@ -168,12 +168,13 @@ seed_chrome_cdp_appearance() {
 
 
 # Chrome Default download path is /opt/downloads (prefs seeded below).
-# Create at runtime so a remounted empty /opt still gets the dir when writable.
+# CDP user-data-dir lives under /opt too so an empty /opt volume remount keeps profile.
+# Create at runtime so a remounted empty /opt still gets the dirs when writable.
 prepare_chrome_downloads() {
-    mkdir -p /opt/downloads
+    mkdir -p /opt/downloads /opt/google-chrome-cdp
     # Entrypoint runs as sandbox; chown is a no-op when already owned / not root.
     if [ "$(id -u)" = "0" ]; then
-        chown sandbox:sandbox /opt/downloads 2>/dev/null || true
+        chown sandbox:sandbox /opt/downloads /opt/google-chrome-cdp 2>/dev/null || true
     fi
 }
 
@@ -194,9 +195,9 @@ start_chrome_cdp() {
     done
     sleep 1
     # Drop stale singleton locks so a fresh Chrome can bind 9222.
-    rm -f "$HOME/.config/google-chrome-cdp/SingletonLock" \
-        "$HOME/.config/google-chrome-cdp/SingletonCookie" \
-        "$HOME/.config/google-chrome-cdp/SingletonSocket"
+    rm -f /opt/google-chrome-cdp/SingletonLock \
+        /opt/google-chrome-cdp/SingletonCookie \
+        /opt/google-chrome-cdp/SingletonSocket
     # Align CDP profile appearance with normal Chrome UI before launch.
     seed_chrome_cdp_appearance
     DISPLAY=:1 nohup "$HOME/.local/bin/chrome-cdp" \

@@ -1,7 +1,7 @@
 import json, os, shutil
 
 normal = os.path.expanduser("~/.config/google-chrome")
-cdp = os.path.expanduser("~/.config/google-chrome-cdp")
+cdp = "/opt/google-chrome-cdp"
 n_pref_path = os.path.join(normal, "Default", "Preferences")
 c_pref_path = os.path.join(cdp, "Default", "Preferences")
 n_ls = os.path.join(normal, "Local State")

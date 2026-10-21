@@ -11,9 +11,9 @@ start_chrome_cdp() {
   pids=$(ss -ltnp 'sport = :9222' 2>/dev/null | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u)
   for pid in $pids; do kill "$pid" 2>/dev/null || true; done
   sleep 1
-  rm -f "$HOME/.config/google-chrome-cdp/SingletonLock" \
-        "$HOME/.config/google-chrome-cdp/SingletonCookie" \
-        "$HOME/.config/google-chrome-cdp/SingletonSocket"
+  rm -f "/opt/google-chrome-cdp/SingletonLock" \
+        "/opt/google-chrome-cdp/SingletonCookie" \
+        "/opt/google-chrome-cdp/SingletonSocket"
   python3 "$HOME/.local/bin/seed-chrome-cdp-appearance.py" >>"$HOME/.config/chrome-cdp.log" 2>&1 || true
   nohup "$HOME/.local/bin/chrome-cdp" --no-first-run --no-default-browser-check about:blank \
     >>"$HOME/.config/chrome-cdp.log" 2>&1 &
