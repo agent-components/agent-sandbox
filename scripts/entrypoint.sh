@@ -86,6 +86,31 @@ start_novnc() {
     echo $! > "$HOME/.vnc/novnc-${port}.pid"
 }
 
+
+# Rewrite xfce4-panel.xml position to bottom-center: p=12;x=W/2;y=0.
+# W: SANDBOX_DISPLAY_WIDTH, else xdpyinfo dimensions, else 1920.
+apply_panel_bottom_center() {
+    local panel_xml="$1"
+    local w="${SANDBOX_DISPLAY_WIDTH:-}"
+    local mid pos
+    if [ -z "$w" ] || ! [ "$w" -gt 0 ] 2>/dev/null; then
+        w=$(DISPLAY="${DISPLAY:-:1}" xdpyinfo 2>/dev/null \
+            | awk '/dimensions:/ { print $2; exit }' \
+            | cut -dx -f1 || true)
+    fi
+    if [ -z "$w" ] || ! [ "$w" -gt 0 ] 2>/dev/null; then
+        w=1920
+    fi
+    mid=$((w / 2))
+    pos="p=12;x=${mid};y=0"
+    if [ ! -f "$panel_xml" ]; then
+        return 0
+    fi
+    # GNU sed (container); rewrite the panel-2 position string only.
+    sed -i "s/value=\"p=12;x=[0-9]*;y=0\"/value=\"${pos}\"/" "$panel_xml"
+    echo "xfce4-panel position -> ${pos} (display width ${w})" >&2
+}
+
 # Seed XFCE so panel/desktop open /home/workspace (not $HOME).
 # Tokens stay env-only; this only writes UI shortcuts.
 seed_xfce_workspace_ui() {
@@ -104,6 +129,9 @@ seed_xfce_workspace_ui() {
 
     if [ -f "$seed/xfconf/xfce4-panel.xml" ]; then
         cp -f "$seed/xfconf/xfce4-panel.xml" "$xfconf_dir/xfce4-panel.xml"
+        # Bottom-center dock for current geometry (seed ships p=12;x=960 for 1920).
+        # Prefer SANDBOX_DISPLAY_WIDTH (seed runs before vncserver); else xdpyinfo; else 1920.
+        apply_panel_bottom_center "$xfconf_dir/xfce4-panel.xml"
     fi
     if [ -f "$seed/xfconf/xfce4-desktop.xml" ]; then
         cp -f "$seed/xfconf/xfce4-desktop.xml" "$xfconf_dir/xfce4-desktop.xml"

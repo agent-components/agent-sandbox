@@ -2,7 +2,7 @@
 # Keep the XFCE bottom dock under maximized/fullscreen clients.
 #
 # enable-struts=false already makes _NET_WORKAREA full-screen, so Chrome
-# maximizes to 1920x1080 geometrically — but xfce4-panel still uses
+# maximizes to full SANDBOX_DISPLAY geometry — but xfce4-panel still uses
 # _NET_WM_WINDOW_TYPE_DOCK, so xfwm4 stacks it above normal windows.
 # Force _NET_WM_STATE_BELOW (and demote TYPE to NORMAL) so maximize/fullscreen
 # paint over the dock. Panel stays mapped for clicks when nothing covers it.

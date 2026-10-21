@@ -26,7 +26,7 @@
 | `scripts/start-novnc.sh` | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080` |
 | `scripts/panel-keep-below.sh` | 将 xfce4-panel 设为 keep-below（取消 dock 置顶层），配合 `enable-struts=false` 让最大化/全屏盖住 dock |
 | `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel` |
-| `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` + `panel-keep-below.sh` 使最大化/全屏盖住 dock） |
+| `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` + `panel-keep-below.sh` 使最大化/全屏盖住 dock）。entrypoint seed 时按 `SANDBOX_DISPLAY_WIDTH`（或 `xdpyinfo`）把 `position` 写成底边居中 `p=12;x=W/2;y=0` |
 | `scripts/novnc/vnc_lite.html` | 自定义 noVNC lite：隐藏 Connected 条；Ctrl/Cmd+V 同步本地剪贴板进桌面 |
 | `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
 | `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |

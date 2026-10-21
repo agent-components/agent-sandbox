@@ -2,7 +2,8 @@
 
 <!-- Bottom dock only (no top Applications/clock/user bar).
      Three launchers only: chrome-cdp, xfce4-terminal, workspace files.
-     Narrow (length 1% + length-adjust) and bottom-centered (p=12;x=mid).
+     Narrow (length 1% + length-adjust). Seed ships p=12;x=960;y=0 (1920 mid);
+     entrypoint rewrites x=W/2 from SANDBOX_DISPLAY_WIDTH (or xdpyinfo) at seed.
      enable-struts=false: do not reserve bottom workarea (full _NET_WORKAREA).
      Stacking: panel-keep-below.sh demotes DOCK + sets BELOW so maximize /
      fullscreen paint over the dock (struts alone are not enough).
