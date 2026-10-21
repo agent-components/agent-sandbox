@@ -220,10 +220,13 @@ prepare_chrome_downloads() {
 # Minimize CDP Chrome once its X window appears. Entrypoint default start should
 # not cover the desktop; dock toggle remains launch-chrome-cdp / single-instance.
 # CDP on :9222 is unaffected (process + debugging port stay up).
-# Re-applies after map/focus races (e.g. playwright-cli attach raising the window).
+# Re-applies through map/focus races (Chrome remap, playwright-cli attach).
+# Requires HIDDEN/Iconic to hold for a short settle window before success.
 minimize_chrome_cdp_window() {
     local i wid state
     local display="${DISPLAY:-:1}"
+    local hidden_streak=0
+    # ~15s total; need ~2s continuous hidden (8 * 0.25)
     for i in $(seq 1 60); do
         wid=$(DISPLAY="$display" wmctrl -lx 2>/dev/null | awk '
             BEGIN { IGNORECASE = 1 }
@@ -237,13 +240,28 @@ minimize_chrome_cdp_window() {
             fi
             state=$(DISPLAY="$display" xprop -id "$wid" _NET_WM_STATE 2>/dev/null || true)
             case "$state" in
-                *_NET_WM_STATE_HIDDEN*) return 0 ;;
+                *_NET_WM_STATE_HIDDEN*)
+                    hidden_streak=$((hidden_streak + 1))
+                    if [ "$hidden_streak" -ge 8 ]; then
+                        return 0
+                    fi
+                    sleep 0.25
+                    continue
+                    ;;
             esac
             state=$(DISPLAY="$display" xprop -id "$wid" WM_STATE 2>/dev/null || true)
             case "$state" in
-                *Iconic*) return 0 ;;
+                *Iconic*)
+                    hidden_streak=$((hidden_streak + 1))
+                    if [ "$hidden_streak" -ge 8 ]; then
+                        return 0
+                    fi
+                    sleep 0.25
+                    continue
+                    ;;
             esac
         fi
+        hidden_streak=0
         sleep 0.25
     done
     return 1
