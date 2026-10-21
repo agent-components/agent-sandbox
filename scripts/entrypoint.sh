@@ -217,6 +217,38 @@ prepare_chrome_downloads() {
     fi
 }
 
+# Minimize CDP Chrome once its X window appears. Entrypoint default start should
+# not cover the desktop; dock toggle remains launch-chrome-cdp / single-instance.
+# CDP on :9222 is unaffected (process + debugging port stay up).
+# Re-applies after map/focus races (e.g. playwright-cli attach raising the window).
+minimize_chrome_cdp_window() {
+    local i wid state
+    local display="${DISPLAY:-:1}"
+    for i in $(seq 1 60); do
+        wid=$(DISPLAY="$display" wmctrl -lx 2>/dev/null | awk '
+            BEGIN { IGNORECASE = 1 }
+            /\.Google-chrome-cdp[[:space:]]/ { print $1; exit }
+        ')
+        if [ -n "$wid" ]; then
+            if ! DISPLAY="$display" wmctrl -i -r "$wid" -b add,hidden 2>/dev/null; then
+                if command -v xdotool >/dev/null 2>&1; then
+                    DISPLAY="$display" xdotool windowminimize "$(printf '%d' "$wid" 2>/dev/null || echo 0)" 2>/dev/null || true
+                fi
+            fi
+            state=$(DISPLAY="$display" xprop -id "$wid" _NET_WM_STATE 2>/dev/null || true)
+            case "$state" in
+                *_NET_WM_STATE_HIDDEN*) return 0 ;;
+            esac
+            state=$(DISPLAY="$display" xprop -id "$wid" WM_STATE 2>/dev/null || true)
+            case "$state" in
+                *Iconic*) return 0 ;;
+            esac
+        fi
+        sleep 0.25
+    done
+    return 1
+}
+
 cdp_ready() {
     curl -fsS --max-time 2 http://127.0.0.1:9222/json/version >/dev/null 2>&1
 }
@@ -243,6 +275,9 @@ start_chrome_cdp() {
         --no-first-run --no-default-browser-check about:blank \
         > "$HOME/.config/chrome-cdp.log" 2>&1 &
     echo $! > "$HOME/.config/chrome-cdp.pid"
+    # Initial start minimized (not dock click toggle). Window may appear after
+    # process start; poll in background so CDP wait is not blocked.
+    DISPLAY=:1 minimize_chrome_cdp_window >/dev/null 2>&1 &
 }
 
 attach_playwright_cdp() {
@@ -263,6 +298,7 @@ ensure_chrome_cdp() {
     done
     if cdp_ready; then
         attach_playwright_cdp || true
+        DISPLAY=:1 minimize_chrome_cdp_window >/dev/null 2>&1 || true
         return 0
     fi
     echo "Chrome CDP did not recover on 127.0.0.1:9222" >&2
@@ -340,6 +376,9 @@ start_desktop() {
     else
         echo "Chrome CDP did not start on 127.0.0.1:9222" >&2
     fi
+
+    # After attach (which may raise the window), force entrypoint Chrome minimized.
+    DISPLAY=:1 minimize_chrome_cdp_window >/dev/null 2>&1 || true
 
     stop_port 9333
     nohup env CDP_VIEW_TOKEN="$CDP_VIEW_TOKEN" \
