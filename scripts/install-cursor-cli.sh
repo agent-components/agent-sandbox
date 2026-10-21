@@ -82,6 +82,8 @@ ln -sfn "$AGENT_BIN" "$BIN_DIR/agent"
 ln -sfn "$BIN_DIR/agent" "$BIN_DIR/cursor-agent"
 ln -sfn "$BIN_DIR/agent" "$LOCAL_BIN/agent"
 ln -sfn "$BIN_DIR/cursor-agent" "$LOCAL_BIN/cursor-agent"
+ln -sfn "$BIN_DIR/agent" /usr/local/bin/agent
+ln -sfn "$BIN_DIR/cursor-agent" /usr/local/bin/cursor-agent
 
 cat >"$ENV_FILE" <<EOF
 export PATH="$BIN_DIR:\$PATH"
