@@ -159,7 +159,10 @@ RUN set -eux; \
     mkdir -p /usr/local/share/google-chrome-cdp-seed; \
     HOME=/home/sandbox CHROME_CDP_USER_DATA_DIR=/usr/local/share/google-chrome-cdp-seed \
       python3 /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py; \
-    chown -R sandbox:sandbox /usr/local/share/google-chrome-cdp-seed; \
+    # seed script also writes ~/.config/google-chrome while USER is root → must chown
+    # or runtime sandbox gets PermissionError on Preferences.
+    chown -R sandbox:sandbox /usr/local/share/google-chrome-cdp-seed \
+      /home/sandbox/.config/google-chrome; \
     test -f /usr/local/share/google-chrome-cdp-seed/Default/Preferences
 
 EXPOSE 6080 9333

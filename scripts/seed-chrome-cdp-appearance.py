@@ -121,7 +121,12 @@ n_dl = pin_download_dir(n_pref)
 c_dl = pin_download_dir(c_pref)
 changed = changed or c_dl
 
-save(n_pref_path, n_pref)
+# Normal profile may be root-owned (bake ran as root with HOME=/home/sandbox).
+# Never let that abort CDP prefs write — CDP is what chrome-cdp actually uses.
+try:
+    save(n_pref_path, n_pref)
+except OSError as e:
+    print("seed: skip normal prefs %s (%s)" % (n_pref_path, e), file=sys.stderr)
 save(c_pref_path, c_pref)
 print(
     "seeded changed=%s theme=%s download_dir=%s normal_dl=%s cdp_dl=%s"
