@@ -98,7 +98,9 @@ seed_xfce_workspace_ui() {
         "$HOME/.local/share/xfce4/helpers" \
         "$HOME/.config/xfce4" \
         "$panel_dir/launcher-13" "$panel_dir/launcher-14" \
-        "$panel_dir/launcher-15" "$panel_dir/launcher-16"
+        "$panel_dir/launcher-15"
+    # Drop old panel launcher dirs (e.g. appfinder launcher-16) from prior seeds
+    rm -rf "$panel_dir/launcher-16" "$panel_dir/launcher-17" "$panel_dir/launcher-18"
 
     if [ -f "$seed/xfconf/xfce4-panel.xml" ]; then
         cp -f "$seed/xfconf/xfce4-panel.xml" "$xfconf_dir/xfce4-panel.xml"
@@ -126,13 +128,23 @@ seed_xfce_workspace_ui() {
     fi
 
     # Panel launcher .desktop files (filenames must match xfce4-panel.xml items)
-    [ -f "$apps/xfce4-terminal-emulator.desktop" ] && \
-        cp -f "$apps/xfce4-terminal-emulator.desktop" "$panel_dir/launcher-13/"
+    # plugin-13: terminal
+    rm -f "$panel_dir/launcher-13/"*
+    if [ -f "$seed/panel/launcher-terminal/xfce4-terminal.desktop" ]; then
+        cp -f "$seed/panel/launcher-terminal/xfce4-terminal.desktop" \
+            "$panel_dir/launcher-13/xfce4-terminal.desktop"
+    elif [ -f "$apps/xfce4-terminal.desktop" ]; then
+        cp -f "$apps/xfce4-terminal.desktop" "$panel_dir/launcher-13/xfce4-terminal.desktop"
+    elif [ -f "$apps/xfce4-terminal-emulator.desktop" ]; then
+        cp -f "$apps/xfce4-terminal-emulator.desktop" \
+            "$panel_dir/launcher-13/xfce4-terminal.desktop"
+    fi
+    # plugin-14: workspace files
     if [ -f "$seed/panel/launcher-workspace/workspace-files.desktop" ]; then
         cp -f "$seed/panel/launcher-workspace/workspace-files.desktop" \
             "$panel_dir/launcher-14/workspace-files.desktop"
     fi
-    # Browser launcher: chrome-cdp wrapper (not exo WebBrowser / default profile)
+    # plugin-15: chrome-cdp wrapper (not exo WebBrowser / default profile)
     rm -f "$panel_dir/launcher-15/"*
     if [ -f "$seed/panel/launcher-chrome/chrome-cdp.desktop" ]; then
         cp -f "$seed/panel/launcher-chrome/chrome-cdp.desktop" \
@@ -141,8 +153,6 @@ seed_xfce_workspace_ui() {
         cp -f "$seed/applications/chrome-cdp.desktop" \
             "$panel_dir/launcher-15/chrome-cdp.desktop"
     fi
-    [ -f "$apps/xfce4-appfinder.desktop" ] && \
-        cp -f "$apps/xfce4-appfinder.desktop" "$panel_dir/launcher-16/"
 
     if [ -f "$seed/workspace.desktop" ]; then
         cp -f "$seed/workspace.desktop" "$HOME/Desktop/workspace.desktop"

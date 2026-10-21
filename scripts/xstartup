@@ -4,16 +4,5 @@ unset DBUS_SESSION_BUS_ADDRESS
 export XDG_CURRENT_DESKTOP=XFCE
 export XDG_SESSION_DESKTOP=xfce
 export XDG_SESSION_TYPE=x11
-# If xfce4-panel still starts, kill it silently. Never call xfce4-panel --quit:
-# that can pop a GUI error (Failed to quit the panel / ServiceUnknown) when
-# D-Bus or the panel service is not ready, or when panels are empty.
-(
-  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-    if pgrep -x xfce4-panel >/dev/null 2>&1; then
-      killall -q xfce4-panel >/dev/null 2>&1 || true
-      break
-    fi
-    sleep 1
-  done
-) &
+# Panel seed is bottom dock only (3 launchers). Do not quit xfce4-panel.
 exec startxfce4

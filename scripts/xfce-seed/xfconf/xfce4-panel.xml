@@ -1,11 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- No XFCE panels: hide the top Applications/clock/user bar and the dock.
-     Chrome is started by entrypoint (chrome-cdp); panel launchers are unused. -->
+<!-- Bottom dock only (no top Applications/clock/user bar).
+     Three launchers only: chrome-cdp, xfce4-terminal, workspace files.
+     Trimmed: no other panel plugins or separators. -->
 <channel name="xfce4-panel" version="1.0">
   <property name="configver" type="int" value="2"/>
   <property name="panels" type="array">
+    <value type="int" value="2"/>
+    <property name="dark-mode" type="bool" value="true"/>
+    <property name="panel-2" type="empty">
+      <property name="autohide-behavior" type="uint" value="0"/>
+      <property name="position" type="string" value="p=8;x=0;y=0"/>
+      <property name="length" type="uint" value="12"/>
+      <property name="length-adjust" type="bool" value="true"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="48"/>
+      <property name="icon-size" type="uint" value="48"/>
+      <property name="background-style" type="uint" value="0"/>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="15"/>
+        <value type="int" value="13"/>
+        <value type="int" value="14"/>
+      </property>
+    </property>
   </property>
   <property name="plugins" type="empty">
+    <property name="plugin-13" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-terminal.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-14" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="workspace-files.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-15" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="chrome-cdp.desktop"/>
+      </property>
+    </property>
   </property>
 </channel>

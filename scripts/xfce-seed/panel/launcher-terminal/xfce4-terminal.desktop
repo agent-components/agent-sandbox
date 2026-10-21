@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Terminal
+Name[zh_CN]=终端
+Comment=Terminal Emulator
+Comment[zh_CN]=终端模拟器
+Exec=xfce4-terminal
+Icon=utilities-terminal
+Terminal=false
+StartupNotify=true
+Categories=System;TerminalEmulator;Utility;
