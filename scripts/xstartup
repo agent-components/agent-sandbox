@@ -4,4 +4,15 @@ unset DBUS_SESSION_BUS_ADDRESS
 export XDG_CURRENT_DESKTOP=XFCE
 export XDG_SESSION_DESKTOP=xfce
 export XDG_SESSION_TYPE=x11
+# Belt-and-suspenders: if xfce4-panel still starts, quit it so the browser
+# desktop has no Applications / clock / user top bar.
+(
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    if pgrep -x xfce4-panel >/dev/null 2>&1; then
+      xfce4-panel --quit >/dev/null 2>&1 || killall xfce4-panel >/dev/null 2>&1 || true
+      break
+    fi
+    sleep 1
+  done
+) &
 exec startxfce4

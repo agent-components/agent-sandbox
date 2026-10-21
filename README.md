@@ -1,4 +1,4 @@
-# sandbox-desktop 0.0.1（约 1.71GB）
+# sandbox-desktop 0.0.2（约 1.71GB）
 
 ## 问题与能力
 
@@ -24,8 +24,9 @@
 | `scripts/chrome-cdp-monitor.sh` | 周期探测 CDP；挂了则重启 Chrome 并 re-attach `playwright-cli` |
 | `scripts/seed-chrome-cdp-appearance.py` | 启动前把外观相关偏好从普通 Chrome profile 同步到 CDP profile |
 | `scripts/start-novnc.sh` | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080` |
-| `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4` |
-| `scripts/xfce-seed/` | XFCE 面板/默认浏览器/mime 等种子配置（Web Browser → `chrome-cdp`） |
+| `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel` |
+| `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；`xfce4-panel.xml` 为空 panels（无顶栏/dock） |
+| `scripts/novnc/vnc_lite.html` | 自定义 noVNC lite：隐藏 Connected 条 + 右下角 Clipboard 粘贴同步 |
 | `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
 | `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |
 
@@ -91,8 +92,10 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## 访问
 
-- 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行；`vnc_lite` 已隐藏顶部 Connected/CtrlAltDel 状态栏）
+- 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行）
   - 根路径会跳到 `vnc_lite.html`，**不会**在 URL/静态页里嵌入 `NOVNC_TOKEN`
+  - **XFCE panel 已关闭**（无 Applications/时钟/用户顶栏与 dock）；Chrome 仍由入口 `chrome-cdp` 自动拉起
+  - **剪贴板**：右下角 `Clipboard` 面板可粘贴文本同步进桌面，再在桌面内 Ctrl+V；或在桌面焦点下直接 Ctrl/Cmd+V（需浏览器剪贴板权限）。noVNC 自带 Connected 状态条也已隐藏
   - 连接前在 noVNC Settings 把 **path** 设为：`websockify?token=你的NOVNC_TOKEN`，再 Connect
   - 或手动打开（自行替换 token）：
     `https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token`

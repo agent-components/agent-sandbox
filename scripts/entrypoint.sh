@@ -25,17 +25,19 @@ stop_port() {
 prepare_novnc_web() {
     local web_root="$HOME/.vnc/novnc-web"
     local item
+    local custom_lite="$HOME/.local/share/novnc/vnc_lite.html"
     rm -rf "$web_root"
     mkdir -p "$web_root"
     for item in /usr/share/novnc/*; do
         ln -s "$item" "$web_root/$(basename "$item")"
     done
-    # Hide vnc_lite top bar ("Connected to Desktop" / "Send CtrlAltDel").
-    # Replace the symlink with a patched copy so package files stay untouched.
-    if [ -f /usr/share/novnc/vnc_lite.html ]; then
-        rm -f "$web_root/vnc_lite.html"
+    # Prefer sandbox-desktop vnc_lite: hidden noVNC top_bar + clipboard paste UI.
+    # Falls back to package file with only #top_bar hidden.
+    rm -f "$web_root/vnc_lite.html"
+    if [ -f "$custom_lite" ]; then
+        cp "$custom_lite" "$web_root/vnc_lite.html"
+    elif [ -f /usr/share/novnc/vnc_lite.html ]; then
         cp /usr/share/novnc/vnc_lite.html "$web_root/vnc_lite.html"
-        # Insert display:none into the existing #top_bar rule.
         sed -i 's|#top_bar {|#top_bar { display: none !important;|' \
             "$web_root/vnc_lite.html"
     fi

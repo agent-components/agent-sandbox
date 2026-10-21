@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <!--
+    noVNC lite page for sandbox-desktop (based on Debian novnc 1.6 vnc_lite.html).
+
+    Changes vs package:
+    - Hide #top_bar (Connected / CtrlAltDel overlay)
+    - Clipboard: floating panel + Ctrl/Cmd+V sync via Clipboard API / paste event
+      so local browser text can be pasted into the remote desktop.
+
+    Connect parameters are provided in query string:
+        http://example.com/?host=HOST&port=PORT&scale=true
+    -->
+    <title>Desktop</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            background-color: dimgrey;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        html {
+            height: 100%;
+        }
+
+        #top_bar {
+            display: none !important;
+            background-color: #6e84a3;
+            color: white;
+            font: bold 12px Helvetica;
+            padding: 6px 5px 4px 5px;
+            border-bottom: 1px outset;
+        }
+        #status {
+            text-align: center;
+        }
+        #sendCtrlAltDelButton {
+            position: fixed;
+            top: 0px;
+            right: 0px;
+            border: 1px outset;
+            padding: 5px 5px 4px 5px;
+            cursor: pointer;
+        }
+
+        #screen {
+            flex: 1; /* fill remaining space */
+            overflow: hidden;
+        }
+
+        #clip_btn {
+            position: fixed;
+            right: 12px;
+            bottom: 12px;
+            z-index: 1000;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font: 13px system-ui, sans-serif;
+            color: #fff;
+            background: rgba(30, 30, 30, 0.75);
+            cursor: pointer;
+        }
+        #clip_btn:hover { background: rgba(30, 30, 30, 0.92); }
+
+        #clip_panel {
+            display: none;
+            position: fixed;
+            right: 12px;
+            bottom: 52px;
+            z-index: 1000;
+            width: min(360px, calc(100vw - 24px));
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(20, 20, 20, 0.92);
+            color: #eee;
+            font: 12px system-ui, sans-serif;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+        #clip_panel.open { display: block; }
+        #clip_panel label { display: block; margin-bottom: 6px; }
+        #clip_panel textarea {
+            width: 100%;
+            box-sizing: border-box;
+            min-height: 96px;
+            resize: vertical;
+            border-radius: 6px;
+            border: 1px solid #555;
+            padding: 8px;
+            background: #111;
+            color: #eee;
+            font: 13px ui-monospace, monospace;
+        }
+        #clip_panel .hint {
+            margin-top: 6px;
+            opacity: 0.75;
+            line-height: 1.35;
+        }
+
+    </style>
+
+    <script type="module" crossorigin="anonymous">
+        // RFB holds the API to connect and communicate with a VNC server
+        import RFB from './core/rfb.js';
+
+        let rfb;
+        let desktopName;
+        let clipSyncing = false;
+
+        function connectedToServer(e) {
+            status("Connected to " + desktopName);
+        }
+
+        function disconnectedFromServer(e) {
+            if (e.detail.clean) {
+                status("Disconnected");
+            } else {
+                status("Something went wrong, connection is closed");
+            }
+        }
+
+        function credentialsAreRequired(e) {
+            const password = prompt("Password required:");
+            rfb.sendCredentials({ password: password });
+        }
+
+        function updateDesktopName(e) {
+            desktopName = e.detail.name;
+        }
+
+        function sendCtrlAltDel() {
+            rfb.sendCtrlAltDel();
+            return false;
+        }
+
+        function status(text) {
+            document.getElementById('status').textContent = text;
+        }
+
+        function readQueryVariable(name, defaultValue) {
+            const re = new RegExp('.*[?&]' + name + '=([^&#]*)'),
+                  match = document.location.href.match(re);
+
+            if (match) {
+                return decodeURIComponent(match[1]);
+            }
+
+            return defaultValue;
+        }
+
+        function clipboardTextArea() {
+            return document.getElementById('clip_text');
+        }
+
+        function sendClipboardToServer(text) {
+            if (!rfb || text == null) {
+                return;
+            }
+            rfb.clipboardPasteFrom(String(text));
+        }
+
+        function onServerClipboard(e) {
+            const text = e.detail && e.detail.text != null ? e.detail.text : '';
+            const area = clipboardTextArea();
+            if (area) {
+                area.value = text;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText && text) {
+                navigator.clipboard.writeText(text).catch(() => {});
+            }
+        }
+
+        async function syncBrowserClipboardToServer() {
+            if (!rfb || clipSyncing) {
+                return false;
+            }
+            clipSyncing = true;
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text) {
+                        sendClipboardToServer(text);
+                        const area = clipboardTextArea();
+                        if (area) {
+                            area.value = text;
+                        }
+                        return true;
+                    }
+                }
+            } catch (_) {
+                // Permissions / non-secure context: user can use the clipboard panel.
+            } finally {
+                clipSyncing = false;
+            }
+            return false;
+        }
+
+        function setupClipboardUi() {
+            const btn = document.getElementById('clip_btn');
+            const panel = document.getElementById('clip_panel');
+            const area = clipboardTextArea();
+            if (!btn || !panel || !area) {
+                return;
+            }
+
+            btn.addEventListener('click', () => {
+                panel.classList.toggle('open');
+                if (panel.classList.contains('open')) {
+                    area.focus();
+                } else if (rfb) {
+                    rfb.focus();
+                }
+            });
+
+            const push = () => sendClipboardToServer(area.value);
+            area.addEventListener('change', push);
+            area.addEventListener('input', push);
+            area.addEventListener('paste', (ev) => {
+                // Let the paste land in the textarea, then push on next tick.
+                setTimeout(push, 0);
+            });
+        }
+
+        document.getElementById('sendCtrlAltDelButton')
+            .onclick = sendCtrlAltDel;
+
+        const host = readQueryVariable('host', window.location.hostname);
+        let port = readQueryVariable('port', window.location.port);
+        const password = readQueryVariable('password');
+        const path = readQueryVariable('path', 'websockify');
+
+        status("Connecting");
+
+        let url;
+        if (window.location.protocol === "https:") {
+            url = 'wss';
+        } else {
+            url = 'ws';
+        }
+        url += '://' + host;
+        if (port) {
+            url += ':' + port;
+        }
+        url += '/' + path;
+
+        rfb = new RFB(document.getElementById('screen'), url,
+                      { credentials: { password: password } });
+
+        rfb.addEventListener("connect",  connectedToServer);
+        rfb.addEventListener("disconnect", disconnectedFromServer);
+        rfb.addEventListener("credentialsrequired", credentialsAreRequired);
+        rfb.addEventListener("desktopname", updateDesktopName);
+        rfb.addEventListener("clipboard", onServerClipboard);
+
+        rfb.viewOnly = readQueryVariable('view_only', false);
+        rfb.scaleViewport = readQueryVariable('scale', false) ||
+            readQueryVariable('resize', '') === 'scale';
+
+        setupClipboardUi();
+
+        // Seamless path: sync local clipboard before Ctrl/Cmd+V reaches the remote.
+        window.addEventListener('keydown', (e) => {
+            if (!(e.ctrlKey || e.metaKey)) {
+                return;
+            }
+            if (e.key !== 'v' && e.key !== 'V' && e.code !== 'KeyV') {
+                return;
+            }
+            // Don't steal paste from the clipboard textarea itself.
+            if (e.target && e.target.id === 'clip_text') {
+                return;
+            }
+            syncBrowserClipboardToServer();
+        }, true);
+
+        window.addEventListener('paste', (e) => {
+            if (e.target && e.target.id === 'clip_text') {
+                return;
+            }
+            const text = e.clipboardData && e.clipboardData.getData('text/plain');
+            if (text) {
+                sendClipboardToServer(text);
+                const area = clipboardTextArea();
+                if (area) {
+                    area.value = text;
+                }
+            }
+        }, true);
+    </script>
+</head>
+
+<body>
+    <div id="top_bar">
+        <div id="status">Loading</div>
+        <div id="sendCtrlAltDelButton">Send CtrlAltDel</div>
+    </div>
+    <div id="screen">
+        <!-- This is where the remote screen will appear -->
+    </div>
+    <button type="button" id="clip_btn" title="Clipboard">Clipboard</button>
+    <div id="clip_panel" aria-label="Clipboard">
+        <label for="clip_text">剪贴板（粘贴到此处可同步进桌面，再在桌面内 Ctrl+V）</label>
+        <textarea id="clip_text" placeholder="Paste text here…"></textarea>
+        <div class="hint">也可直接在桌面焦点下按 Ctrl/Cmd+V（需浏览器剪贴板权限）。</div>
+    </div>
+</body>
+</html>
