@@ -50,6 +50,13 @@ RUN set -eux; \
         tzdata >/dev/null; \
     rm -rf /var/lib/apt/lists/*
 
+# Disable XFCE panel autostart (empty seed panels; avoid quit dialogs if it still launches).
+RUN set -eux; \
+    f=/etc/xdg/autostart/xfce4-panel.desktop; \
+    if [ -f "$f" ]; then \
+      printf '\nHidden=true\nX-GNOME-Autostart-enabled=false\n' >> "$f"; \
+    fi
+
 # google-chrome-stable (amd64). Host-prefetched .deb: apt http to dl.google.com flakes in CN.
 COPY vendor/google-chrome-stable_current_amd64.deb /tmp/google-chrome-stable_current_amd64.deb
 RUN set -eux; \

@@ -4,12 +4,13 @@ unset DBUS_SESSION_BUS_ADDRESS
 export XDG_CURRENT_DESKTOP=XFCE
 export XDG_SESSION_DESKTOP=xfce
 export XDG_SESSION_TYPE=x11
-# Belt-and-suspenders: if xfce4-panel still starts, quit it so the browser
-# desktop has no Applications / clock / user top bar.
+# If xfce4-panel still starts, kill it silently. Never call xfce4-panel --quit:
+# that can pop a GUI error (Failed to quit the panel / ServiceUnknown) when
+# D-Bus or the panel service is not ready, or when panels are empty.
 (
   for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
     if pgrep -x xfce4-panel >/dev/null 2>&1; then
-      xfce4-panel --quit >/dev/null 2>&1 || killall xfce4-panel >/dev/null 2>&1 || true
+      killall -q xfce4-panel >/dev/null 2>&1 || true
       break
     fi
     sleep 1
