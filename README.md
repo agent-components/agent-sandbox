@@ -25,7 +25,7 @@
 | `scripts/seed-chrome-cdp-appearance.py` | 构建期写入 `/usr/local/share/google-chrome-cdp-seed`；启动前再把外观偏好从普通 Chrome profile 同步到 CDP profile（可用 `CHROME_CDP_USER_DATA_DIR` 或 argv 指定目标） |
 | `scripts/start-novnc.sh` | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080` |
 | `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel` |
-| `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；`xfce4-panel.xml` 为空 panels（无顶栏/dock） |
+| `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` 最大化可盖住 dock） |
 | `scripts/novnc/vnc_lite.html` | 自定义 noVNC lite：隐藏 Connected 条 + 右下角 Clipboard 粘贴同步 |
 | `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
 | `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |

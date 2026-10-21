@@ -109,6 +109,12 @@ seed_xfce_workspace_ui() {
         cp -f "$seed/xfconf/xfce4-desktop.xml" "$xfconf_dir/xfce4-desktop.xml"
     fi
 
+    # Dock capsule look (rounded + translucent); hot-reload: xfce4-panel -r
+    mkdir -p "$HOME/.config/gtk-3.0"
+    if [ -f "$seed/gtk-3.0/gtk.css" ]; then
+        cp -f "$seed/gtk-3.0/gtk.css" "$HOME/.config/gtk-3.0/gtk.css"
+    fi
+
     # Preferred Web Browser + MIME -> chrome-cdp (same user-data-dir / :9222)
     if [ -f "$seed/applications/chrome-cdp.desktop" ]; then
         cp -f "$seed/applications/chrome-cdp.desktop" \

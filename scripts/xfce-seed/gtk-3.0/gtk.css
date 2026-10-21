@@ -1,0 +1,50 @@
+/* Bottom dock: rounded capsule + light translucent “glass”.
+   GTK3 has no backdrop-filter; alpha + compositor is the closest look.
+   Applied via ~/.config/gtk-3.0/gtk.css; reload with: xfce4-panel -r */
+
+#XfcePanelWindow {
+  border-radius: 28px;
+  background-color: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(255, 255, 255, 0.70);
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.14);
+}
+
+#XfcePanelWindow .background,
+.xfce4-panel.horizontal,
+.xfce4-panel.horizontal .background {
+  border-radius: 28px;
+  background-color: rgba(255, 255, 255, 0.52);
+  border-style: none;
+  box-shadow: none;
+}
+
+/* Keep wrapper transparent so only the outer capsule paints */
+#XfcePanelWindowWrapper {
+  background-color: transparent;
+  border-style: none;
+}
+
+/* Spacing between the three launchers + inset from capsule edges */
+.xfce4-panel #launcher-button {
+  margin: 6px 10px;
+  padding: 2px;
+  min-width: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 14px;
+  background-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+.xfce4-panel #launcher-button:hover,
+.xfce4-panel #launcher-button:active,
+.xfce4-panel #launcher-button:checked {
+  background-color: rgba(255, 255, 255, 0.38);
+  box-shadow: none;
+  border: none;
+}
+
+.xfce4-panel #launcher-button image {
+  padding: 0;
+}
