@@ -91,6 +91,8 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
                /opt/downloads \
                /opt/google-chrome-cdp \
     && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp
+# Runtime CDP profile is /opt/google-chrome-cdp (may be wiped by empty /opt mount).
+# Default seed is baked later under /usr/local/share/google-chrome-cdp-seed.
 
 # Node 24 under ~/.local/node-v24 + bin symlinks
 USER sandbox
@@ -136,6 +138,16 @@ RUN chmod 755 /home/sandbox/project/entrypoint.sh \
               /home/sandbox/.local/bin/start-novnc.sh \
               /home/sandbox/.vnc/xstartup \
               /home/sandbox/.config/tigervnc/xstartup
+
+# Bake CDP profile seed outside /opt so child images that bind-mount an empty
+# /opt still get classic theme + download prefs on first start (entrypoint clones
+# into /opt/google-chrome-cdp only when that dir is empty / missing Preferences).
+RUN set -eux; \
+    mkdir -p /usr/local/share/google-chrome-cdp-seed; \
+    HOME=/home/sandbox CHROME_CDP_USER_DATA_DIR=/usr/local/share/google-chrome-cdp-seed \
+      python3 /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py; \
+    chown -R sandbox:sandbox /usr/local/share/google-chrome-cdp-seed; \
+    test -f /usr/local/share/google-chrome-cdp-seed/Default/Preferences
 
 EXPOSE 6080 9333
 

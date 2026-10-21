@@ -168,13 +168,42 @@ seed_chrome_cdp_appearance() {
 
 
 # Chrome Default download path is /opt/downloads (prefs seeded below).
-# CDP user-data-dir lives under /opt too so an empty /opt volume remount keeps profile.
-# Create at runtime so a remounted empty /opt still gets the dirs when writable.
+# CDP user-data-dir lives under /opt (persist volume). Build-time seed lives
+# outside /opt at /usr/local/share/google-chrome-cdp-seed so an empty /opt
+# mount cannot wipe defaults; we clone the seed only when the runtime dir
+# is missing, empty, or lacks Default/Preferences.
+CHROME_CDP_DIR="${CHROME_CDP_DIR:-/opt/google-chrome-cdp}"
+CHROME_CDP_SEED="${CHROME_CDP_SEED:-/usr/local/share/google-chrome-cdp-seed}"
+
+chrome_cdp_needs_seed() {
+    local dir="$1"
+    if [ ! -d "$dir" ]; then
+        return 0
+    fi
+    if [ -z "$(ls -A "$dir" 2>/dev/null)" ]; then
+        return 0
+    fi
+    if [ ! -f "$dir/Default/Preferences" ]; then
+        return 0
+    fi
+    return 1
+}
+
 prepare_chrome_downloads() {
-    mkdir -p /opt/downloads /opt/google-chrome-cdp
-    # Entrypoint runs as sandbox; chown is a no-op when already owned / not root.
+    mkdir -p /opt/downloads "$CHROME_CDP_DIR"
+    if chrome_cdp_needs_seed "$CHROME_CDP_DIR"; then
+        if [ -d "$CHROME_CDP_SEED" ]; then
+            echo "Chrome CDP profile empty; cloning seed from $CHROME_CDP_SEED -> $CHROME_CDP_DIR" >&2
+            cp -a "$CHROME_CDP_SEED"/. "$CHROME_CDP_DIR"/
+        else
+            echo "Chrome CDP seed missing at $CHROME_CDP_SEED; starting with empty profile" >&2
+        fi
+    else
+        echo "Chrome CDP profile already present at $CHROME_CDP_DIR; skip seed clone" >&2
+    fi
+    # Entrypoint usually runs as sandbox; chown when root (e.g. child image root entry).
     if [ "$(id -u)" = "0" ]; then
-        chown sandbox:sandbox /opt/downloads /opt/google-chrome-cdp 2>/dev/null || true
+        chown -R sandbox:sandbox /opt/downloads "$CHROME_CDP_DIR" 2>/dev/null || true
     fi
 }
 

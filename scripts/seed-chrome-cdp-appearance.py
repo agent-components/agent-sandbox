@@ -1,7 +1,11 @@
-import json, os, shutil
+import json, os, shutil, sys
 
 normal = os.path.expanduser("~/.config/google-chrome")
-cdp = "/opt/google-chrome-cdp"
+# Override for build-time seed (path outside /opt so volume mounts cannot wipe it).
+if len(sys.argv) > 1 and sys.argv[1].strip():
+    cdp = sys.argv[1].strip()
+else:
+    cdp = os.environ.get("CHROME_CDP_USER_DATA_DIR", "/opt/google-chrome-cdp").strip() or "/opt/google-chrome-cdp"
 n_pref_path = os.path.join(normal, "Default", "Preferences")
 c_pref_path = os.path.join(cdp, "Default", "Preferences")
 n_ls = os.path.join(normal, "Local State")
