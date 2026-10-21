@@ -188,6 +188,41 @@ function dispatchClick(jx, jy, button = 'left') {
   return true;
 }
 
+/**
+ * Forward a viewer key event into the attached page via CDP.
+ * Printable chars (no Ctrl/Alt/Meta): Input.insertText — reliable for focused inputs.
+ * Everything else: Input.dispatchKeyEvent keyDown/rawKeyDown + keyUp.
+ */
+function dispatchKey(body) {
+  const type = body.type === 'keyUp' ? 'keyUp' : 'keyDown';
+  const key = typeof body.key === 'string' ? body.key : '';
+  const code = typeof body.code === 'string' ? body.code : '';
+  const modifiers = Number(body.modifiers) || 0;
+  const windowsVirtualKeyCode = Number(body.keyCode) || 0;
+  const hasNonShiftMod = (modifiers & (1 | 2 | 4)) !== 0;
+  const printable = key.length === 1 && !hasNonShiftMod;
+
+  if (type === 'keyDown' && printable) {
+    return send('Input.insertText', { text: key });
+  }
+
+  const eventType =
+    type === 'keyUp' ? 'keyUp' : printable ? 'keyDown' : 'rawKeyDown';
+  const params = {
+    type: eventType,
+    modifiers,
+    windowsVirtualKeyCode,
+    nativeVirtualKeyCode: windowsVirtualKeyCode,
+    code,
+    key,
+  };
+  if (type === 'keyDown' && key === 'Enter') {
+    params.text = '\r';
+    params.unmodifiedText = '\r';
+  }
+  return send('Input.dispatchKeyEvent', params);
+}
+
 function readBody(request) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -231,6 +266,7 @@ const pageHtml = `<!DOCTYPE html>
     img.src = '/stream?token=' + encodeURIComponent(token);
     if (interactive) {
       img.classList.add('interactive');
+      img.tabIndex = 0;
       function mapToJpeg(e) {
         const rect = img.getBoundingClientRect();
         const nw = img.naturalWidth || 0;
@@ -246,9 +282,30 @@ const pageHtml = `<!DOCTYPE html>
         if (jx < 0 || jy < 0 || jx > nw || jy > nh) return null;
         return { x: jx, y: jy };
       }
+      function modifiersOf(e) {
+        return (e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0);
+      }
+      async function postKey(type, e) {
+        try {
+          await fetch('/key?token=' + encodeURIComponent(token), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type,
+              key: e.key,
+              code: e.code,
+              keyCode: e.keyCode || e.which || 0,
+              modifiers: modifiersOf(e),
+            }),
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      }
       img.addEventListener('contextmenu', (e) => e.preventDefault());
       img.addEventListener('pointerdown', async (e) => {
         e.preventDefault();
+        img.focus();
         const pt = mapToJpeg(e);
         if (!pt) return;
         const button = e.button === 2 ? 'right' : e.button === 1 ? 'middle' : 'left';
@@ -261,6 +318,20 @@ const pageHtml = `<!DOCTYPE html>
         } catch (err) {
           console.error(err);
         }
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.isComposing || e.key === 'Process') return;
+        e.preventDefault();
+        postKey('keyDown', e);
+      });
+      window.addEventListener('keyup', (e) => {
+        if (e.isComposing || e.key === 'Process') return;
+        e.preventDefault();
+        // Printable chars already applied via insertText on keyDown; skip keyUp for those.
+        const mods = modifiersOf(e);
+        const hasNonShiftMod = (mods & (1 | 2 | 4)) !== 0;
+        if (e.key.length === 1 && !hasNonShiftMod) return;
+        postKey('keyUp', e);
       });
     }
   </script>
@@ -320,6 +391,34 @@ const server = http.createServer(async (request, response) => {
         return;
       }
       const ok = dispatchClick(x, y, body.button || 'left');
+      if (!ok) {
+        response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('cdp not ready');
+        return;
+      }
+      response.writeHead(204);
+      response.end();
+    } catch (err) {
+      response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end(String(err.message || err));
+    }
+    return;
+  }
+  if (url.pathname === '/key' && request.method === 'POST') {
+    if (!tokenOk(url, request)) {
+      response.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
+      response.end('unauthorized');
+      return;
+    }
+    try {
+      const raw = await readBody(request);
+      const body = JSON.parse(raw || '{}');
+      if (!body || (body.type !== 'keyDown' && body.type !== 'keyUp')) {
+        response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+        response.end('bad key event');
+        return;
+      }
+      const ok = dispatchKey(body);
       if (!ok) {
         response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
         response.end('cdp not ready');
