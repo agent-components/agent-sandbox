@@ -24,6 +24,7 @@
 | `scripts/chrome-cdp-monitor.sh` | 周期探测 CDP；挂了则重启 Chrome 并 re-attach `playwright-cli` |
 | `scripts/seed-chrome-cdp-appearance.py` | 构建期写入 `/usr/local/share/google-chrome-cdp-seed`；启动前再把外观偏好从普通 Chrome profile 同步到 CDP profile（可用 `CHROME_CDP_USER_DATA_DIR` 或 argv 指定目标） |
 | `scripts/start-novnc.sh` | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080` |
+| `scripts/install-cursor-cli.sh` | 可选：把 Cursor CLI 装到 `/opt/cursor` 并补齐家目录软链接（仅拷进镜像，构建时不执行） |
 | `scripts/panel-keep-below.sh` | 将 xfce4-panel 设为 keep-below（取消 dock 置顶层），配合 `enable-struts=false` 让最大化/全屏盖住 dock |
 | `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel` |
 | `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` + `panel-keep-below.sh` 使最大化/全屏盖住 dock）。entrypoint seed 时按 `SANDBOX_DISPLAY_WIDTH`（或 `xdpyinfo`）把 `position` 写成底边居中 `p=12;x=W/2;y=0` |

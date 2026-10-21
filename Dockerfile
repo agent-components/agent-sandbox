@@ -128,6 +128,7 @@ COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/
 COPY --chown=sandbox:sandbox scripts/panel-keep-below.sh /home/sandbox/.local/bin/panel-keep-below.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
 COPY --chown=sandbox:sandbox scripts/start-novnc.sh /home/sandbox/.local/bin/start-novnc.sh
+COPY --chown=sandbox:sandbox scripts/install-cursor-cli.sh /home/sandbox/.local/bin/install-cursor-cli.sh
 # TigerVNC 1.15 (trixie) reads ~/.config/tigervnc; keep both paths.
 COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.vnc/xstartup
 COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.config/tigervnc/xstartup
@@ -147,6 +148,7 @@ RUN chmod 755 /home/sandbox/project/entrypoint.sh \
               /home/sandbox/.local/bin/panel-keep-below.sh \
               /home/sandbox/.local/bin/chrome-cdp-view.mjs \
               /home/sandbox/.local/bin/start-novnc.sh \
+              /home/sandbox/.local/bin/install-cursor-cli.sh \
               /home/sandbox/.vnc/xstartup \
               /home/sandbox/.config/tigervnc/xstartup
 
