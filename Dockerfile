@@ -34,7 +34,7 @@ RUN set -eux; \
         python3 openssl \
         curl ca-certificates gnupg \
         dbus-x11 x11-utils \
-        procps iproute2 \
+        procps psmisc iproute2 \
         xz-utils \
         openssh-client openssh-server \
         fonts-wqy-zenhei \
