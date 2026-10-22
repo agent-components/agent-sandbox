@@ -124,7 +124,6 @@ seed_xfce_workspace_ui() {
     local apps=/usr/share/applications
     mkdir -p "$HOME/Desktop" "$xfconf_dir" \
         "$HOME/.local/share/applications" \
-        "$HOME/.local/share/xfce4/helpers" \
         "$HOME/.config/xfce4" \
         "$panel_dir/launcher-13" "$panel_dir/launcher-14" \
         "$panel_dir/launcher-15"
@@ -147,19 +146,10 @@ seed_xfce_workspace_ui() {
         cp -f "$seed/gtk-3.0/gtk.css" "$HOME/.config/gtk-3.0/gtk.css"
     fi
 
-    # Preferred Web Browser + MIME -> chrome-cdp (same user-data-dir / :9222)
+    # MIME + dock launcher -> chrome-cdp (same user-data-dir / :9222)
     if [ -f "$seed/applications/chrome-cdp.desktop" ]; then
         cp -f "$seed/applications/chrome-cdp.desktop" \
             "$HOME/.local/share/applications/chrome-cdp.desktop"
-    fi
-    if [ -f "$seed/helpers/chrome-cdp.desktop" ]; then
-        cp -f "$seed/helpers/chrome-cdp.desktop" \
-            "$HOME/.local/share/xfce4/helpers/chrome-cdp.desktop"
-    fi
-    if [ -f "$seed/helpers.rc" ]; then
-        cp -f "$seed/helpers.rc" "$HOME/.config/xfce4/helpers.rc"
-    else
-        printf '%s\n' 'WebBrowser=chrome-cdp' > "$HOME/.config/xfce4/helpers.rc"
     fi
     if [ -f "$seed/mimeapps.list" ]; then
         cp -f "$seed/mimeapps.list" "$HOME/.config/mimeapps.list"
