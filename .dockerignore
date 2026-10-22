@@ -1,0 +1,9 @@
+# Host-only helpers; not part of the image layout
+scripts/
+.git/
+.gitignore
+README.md
+.verify/
+**/.DS_Store
+*.log
+*.tmp

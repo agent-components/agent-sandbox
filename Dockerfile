@@ -3,60 +3,21 @@
 FROM debian:trixie-slim
 
 ARG TARGETARCH
-ENV DEBIAN_FRONTEND=noninteractive \
-    LANG=C.UTF-8 \
-    HOME=/home/sandbox \
-    USER=sandbox \
-    DISPLAY=:1 \
-    TZ=Asia/Shanghai
+ENV HOME=/home/sandbox \
+    USER=sandbox
 
-# Apt resilience for flaky CN mirrors / large debs (e.g. libllvm19)
-RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\nAcquire::https::Timeout "30";\n' \
-      > /etc/apt/apt.conf.d/80-retries
-
-# Tsinghua mirrors (network; not a feature addition)
-RUN set -eux; \
-    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
-      sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g; s|security.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list.d/debian.sources; \
-    fi; \
-    if [ -f /etc/apt/sources.list ]; then \
-      sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g; s|security.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list; \
-    fi
-
-# Desktop + VNC + utils + lightweight CJK (WenQuanYi; not full Noto CJK)
-RUN set -eux; \
-    apt-get update; \
-    for i in 1 2 3 4 5; do \
-      apt-get install -y --no-install-recommends \
-        xfce4 xfce4-terminal thunar \
-        tigervnc-standalone-server \
-        novnc websockify \
-        python3 openssl \
-        curl ca-certificates gnupg \
-        dbus-x11 x11-utils \
-        procps psmisc iproute2 \
-        xz-utils \
-        fonts-wqy-zenhei \
-        scrot \
-        xdotool \
-        wmctrl \
-        tzdata \
-      && break; \
-      echo "apt install failed (try $i), retrying..."; \
-      apt-get update; \
-      sleep $((i * 5)); \
-    done; \
-    dpkg -l fonts-wqy-zenhei \
-        tzdata >/dev/null; \
-    rm -rf /var/lib/apt/lists/*
+COPY docker/build/install-desktop-apt.sh /tmp/install-desktop-apt.sh
+RUN chmod +x /tmp/install-desktop-apt.sh && /tmp/install-desktop-apt.sh && rm -f /tmp/install-desktop-apt.sh
 
 # google-chrome-stable (amd64). Host-prefetched .deb: apt http to dl.google.com flakes in CN.
-COPY vendor/google-chrome-stable_current_amd64.deb /tmp/google-chrome-stable_current_amd64.deb
+# Prefetch: ./scripts/download-chrome-dep.sh → docker/home/sandbox/packages/
+COPY docker/home/sandbox/packages/google-chrome-stable_current_amd64.deb /tmp/google-chrome-stable_current_amd64.deb
 RUN set -eux; \
     if [ "$TARGETARCH" != "amd64" ]; then \
       echo "This image expects TARGETARCH=amd64 (google-chrome-stable). Rebuild with --platform linux/amd64." >&2; \
       exit 1; \
     fi; \
+    export DEBIAN_FRONTEND=noninteractive; \
     apt-get update; \
     apt-get install -y --no-install-recommends /tmp/google-chrome-stable_current_amd64.deb; \
     rm -f /tmp/google-chrome-stable_current_amd64.deb; \
@@ -80,7 +41,6 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
                /home/sandbox/.config/tigervnc \
                /home/sandbox/.local/bin \
                /home/sandbox/.config \
-               /home/sandbox/project \
                /home/sandbox/Desktop \
                /home/workspace \
                /opt/downloads \
@@ -109,34 +69,22 @@ RUN set -eux; \
     command -v playwright-cli || ls -la /home/sandbox/.local/node-v24/bin/
 
 USER root
-# Repo paths mirror the container: docker/home/sandbox/... → /home/sandbox/...
+# Repo paths mirror the container: docker/home/... → /home/...
 COPY --chown=sandbox:sandbox docker/home/sandbox/ /home/sandbox/
-COPY docker/usr/local/share/google-chrome-cdp-seed/ /usr/local/share/google-chrome-cdp-seed/
+COPY --chmod=755 docker/home/entrypoint.sh /home/entrypoint.sh
+COPY --chmod=755 docker/home/start/ /home/start/
+COPY docker/usr/local/share/google-chrome-cdp/ /usr/local/share/google-chrome-cdp/
 
-RUN chmod 755 \
-      /home/sandbox/project/entrypoint.sh \
-      /home/sandbox/.local/bin/start_vnc.sh \
-      /home/sandbox/.local/bin/chrome-cdp \
-      /home/sandbox/.local/bin/chrome-cdp-runtime.sh \
-      /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
-      /home/sandbox/.local/bin/chrome-cdp-view.mjs \
-      /home/sandbox/.local/bin/single-instance \
-      /home/sandbox/.local/bin/panel-keep-below.sh \
-      /home/sandbox/.local/bin/launch-chrome-cdp \
-      /home/sandbox/.local/bin/launch-terminal \
-      /home/sandbox/.local/bin/launch-workspace \
-      /home/sandbox/.local/bin/install-cursor-cli.sh \
-      /home/sandbox/.vnc/xstartup \
-      /home/sandbox/.config/tigervnc/xstartup \
- && chmod 644 /home/sandbox/Desktop/workspace.desktop \
+# Build-only Chrome .deb must not remain under /home/sandbox/packages
+RUN rm -rf /home/sandbox/packages \
+ && chmod -R a+rX /home/sandbox/.local/bin \
+ && chmod 755 /home/sandbox/.vnc/xstartup /home/sandbox/.config/tigervnc/xstartup \
  && mkdir -p /opt/downloads \
- && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp-seed /opt/downloads \
- && test -f /home/sandbox/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml \
- && test -f /usr/local/share/google-chrome-cdp-seed/Default/Preferences
+ && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp /opt/downloads
 
 EXPOSE 6080 9333
 
 USER sandbox
 WORKDIR /home/workspace
 ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:${PATH}"
-ENTRYPOINT ["/home/sandbox/project/entrypoint.sh"]
+ENTRYPOINT ["/home/entrypoint.sh"]

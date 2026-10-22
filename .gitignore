@@ -8,5 +8,5 @@
 .env
 .env.*
 !.env.example
-vendor/*.deb
+docker/home/sandbox/packages/*.deb
 .verify/

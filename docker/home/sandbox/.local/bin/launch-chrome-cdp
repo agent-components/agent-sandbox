@@ -1,6 +1,50 @@
-#!/bin/sh
-# Panel launcher: single Chrome CDP window (toggle minimize/focus if already open).
-# WM_CLASS class is set by chrome-cdp --class=Google-chrome-cdp.
-exec /home/sandbox/.local/bin/single-instance \
-  --class Google-chrome-cdp \
-  -- /home/sandbox/.local/bin/chrome-cdp "$@"
+#!/bin/bash
+# Dock launcher: single Chrome window. First open starts Chrome+CDP and attaches
+# playwright; later clicks toggle via single-instance. Closing Chrome drops CDP
+# until the next dock launch (no background monitor).
+set -euo pipefail
+
+export HOME="${HOME:-/home/sandbox}"
+export PATH="$HOME/.local/bin:$PATH"
+export DISPLAY="${DISPLAY:-:1}"
+
+# shellcheck source=/dev/null
+. "$HOME/.local/bin/chrome-cdp-runtime.sh"
+
+chrome_window_open() {
+    wmctrl -lx 2>/dev/null | awk '
+        BEGIN { IGNORECASE = 1 }
+        /\.Google-chrome-cdp[[:space:]]/ { found = 1; exit }
+        END { exit !found }
+    '
+}
+
+# Already running: focus / minimize only.
+if chrome_window_open; then
+    exec "$HOME/.local/bin/single-instance" \
+        --class Google-chrome-cdp \
+        -- "$HOME/.local/bin/chrome-cdp" "$@"
+fi
+
+# Cold start: prepare profile, start Chrome (CDP flags in chrome-cdp), attach.
+prepare_chrome_profile
+clear_stale_chrome_cdp
+mkdir -p "$HOME/.config"
+nohup "$HOME/.local/bin/chrome-cdp" \
+    --no-first-run --no-default-browser-check ${1+"$@"} \
+    >>"$HOME/.config/chrome-cdp.log" 2>&1 &
+echo $! >"$HOME/.config/chrome-cdp.pid"
+
+i=0
+while [ "$i" -lt 30 ]; do
+    cdp_ready && break
+    i=$((i + 1))
+    sleep 1
+done
+
+if cdp_ready; then
+    attach_playwright_cdp || true
+else
+    echo "Chrome CDP did not come up on 127.0.0.1:9222" >&2
+    exit 1
+fi

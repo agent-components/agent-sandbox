@@ -7,32 +7,33 @@
 能力概览：
 
 - 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`；WebSocket 需自行提供 token，静态页不嵌入）；分辨率由 `SANDBOX_DISPLAY_WIDTH`/`HEIGHT` 控制，默认 `1920x1080`
-- 浏览器：`google-chrome-stable`（安装树在 `/usr/local/google/chrome`，避开子镜像对 `/opt` 的空盘挂载）；经 `chrome-cdp` 固定 CDP profile（`--user-data-dir=/opt/google-chrome-cdp`，`127.0.0.1:9222`，**不**映射到宿主机，无 socat）；构建期默认 profile 种子在 `/usr/local/share/google-chrome-cdp-seed`（不被 `/opt` 挂载盖住），entrypoint 仅在 `/opt/google-chrome-cdp` 为空或缺 `Default/Preferences` 时 `cp -a` 克隆过去；窗口用 `--window-size` 对齐上述分辨率，CDP viewport 同尺寸；默认下载目录 `/opt/downloads`
+- 浏览器：`google-chrome-stable`（安装树在 `/usr/local/google/chrome`，避开子镜像对 `/opt` 的空盘挂载）；经 `chrome-cdp` 固定 CDP profile（`--user-data-dir=/opt/google-chrome-cdp`，`127.0.0.1:9222`，**不**映射到宿主机，无 socat）；构建期默认 profile 在 `/usr/local/share/google-chrome-cdp`（不被 `/opt` 挂载盖住），entrypoint 仅在 `/opt/google-chrome-cdp` 为空或缺 `Default/Preferences` 时 `cp -a` 克隆过去；窗口用 `--window-size` 对齐上述分辨率，CDP viewport 同尺寸；默认下载目录 `/opt/downloads`
 - Chrome 画面：`chrome-cdp-view` MJPEG（`:9333`，需 token；可加 `click=1` 映射鼠标到 CDP）
 - 运行时：Node 24、`playwright-cli`；轻量中文字体 `fonts-wqy-zenhei`
 - 登录 token **仅**运行时环境变量 `NOVNC_TOKEN`、`CDP_VIEW_TOKEN`（镜像不内置默认/随机值；缺则入口报错退出）
 
 ## 目录介绍
 
-| 路径 | 用途 |
-| ---- | ---- |
-| `docker/home/sandbox/` | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去 |
-| `docker/usr/local/share/google-chrome-cdp-seed/` | CDP Preferences 种子 → `/usr/local/share/...` |
-| `docker/home/sandbox/project/entrypoint.sh` | 入口编排：调 `start_vnc.sh` 再起 Chrome CDP |
-| `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底） |
-| `vendor/` | 本地 Chrome `.deb` |
-| `Dockerfile` | 镜像构建 |
-| `README.md` | 本说明 |
+| 路径                                          | 用途                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| `docker/home/sandbox/`                        | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去             |
+| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 Preferences → `/usr/local/share/google-chrome-cdp/`              |
+| `docker/home/entrypoint.sh`                   | 入口编排 → `/home/entrypoint.sh`；调 `start_vnc.sh`，CDP 由 dock 按需启动 |
+| `docker/home/start/`                          | 可选运维脚本 → `/home/start/`（如 `install-cursor-cli.sh`）               |
+| `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底）                                   |
+| `docker/home/sandbox/packages/`               | 本地预取的 Chrome `.deb`（构建用；不进最终镜像 home）                     |
+| `scripts/download-chrome-dep.sh`              | 下载 Chrome `.deb` 到 `packages/`（不打进镜像）                           |
+| `Dockerfile`                                  | 镜像构建                                                                  |
+| `README.md`                                   | 本说明                                                                    |
 
-容器内对应布局：入口 `/home/sandbox/project/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 构建种子 `/usr/local/share/google-chrome-cdp-seed`；下载目录 `/opt/downloads`。
+容器内对应布局：入口 `/home/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 默认配置 `/usr/local/share/google-chrome-cdp`；下载目录 `/opt/downloads`。
 
 ## 构建
 
 ```bash
 cd ~/docker-sandbox-desktop
-# 若 apt 拉不到 Chrome，可先：
-#   mkdir -p vendor && curl -fL -o vendor/google-chrome-stable_current_amd64.deb \
-#     https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+# 若尚无 .deb，先预取（写入 docker/home/sandbox/packages/）：
+./scripts/download-chrome-dep.sh
 docker build --platform linux/amd64 -t local/sandbox-desktop:0.1.0 .
 ```
 
@@ -45,12 +46,11 @@ docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g
   -p 6080:6080 -p 9333:9333 \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
-  -e TZ=Asia/Shanghai \
   # 可选：-e SANDBOX_DISPLAY_WIDTH=1920 -e SANDBOX_DISPLAY_HEIGHT=1080 \
   local/sandbox-desktop:0.1.0
 ```
 
-Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-opt seccomp=unconfined`。镜像内对 `/usr/bin/google-chrome-stable` 做了薄包装（`--no-sandbox --disable-gpu`），`/usr/bin/google-chrome-stable.real` → `/usr/local/google/chrome/google-chrome`；`scripts/chrome-cdp` 仍为沙箱原文。Chrome 默认下载目录为 `/opt/downloads`，CDP `--user-data-dir` 为 `/opt/google-chrome-cdp`。构建期把 `scripts/chrome-cdp-seed/` 拷进 `/usr/local/share/google-chrome-cdp-seed`（不在 `/opt` 下，空盘挂载盖不掉）；entrypoint 启动时若 `/opt/google-chrome-cdp` 为空或缺 `Default/Preferences` 则 `cp -a` 种子过去，已有用户数据则跳过。子镜像若把空卷挂到 `/opt`，需在 root 入口里同样保证 `/opt/downloads` 与 `/opt/google-chrome-cdp` 可写。
+Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-opt seccomp=unconfined`。镜像内对 `/usr/bin/google-chrome-stable` 做了薄包装（`--no-sandbox --disable-gpu`），`/usr/bin/google-chrome-stable.real` → `/usr/local/google/chrome/google-chrome`；`scripts/chrome-cdp` 仍为沙箱原文。Chrome 默认下载目录为 `/opt/downloads`，CDP `--user-data-dir` 为 `/opt/google-chrome-cdp`。构建期把 `docker/usr/local/share/google-chrome-cdp/` 拷进 `/usr/local/share/google-chrome-cdp`（不在 `/opt` 下，空盘挂载盖不掉）；entrypoint 启动时若 `/opt/google-chrome-cdp` 为空或缺 `Default/Preferences` 则 `cp -a` 默认配置过去，已有用户数据则跳过。子镜像若把空卷挂到 `/opt`，需在 root 入口里同样保证 `/opt/downloads` 与 `/opt/google-chrome-cdp` 可写。
 
 运行时必须传入 `NOVNC_TOKEN` 与 `CDP_VIEW_TOKEN`。
 
@@ -62,11 +62,8 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 | `CDP_VIEW_TOKEN`         | 是   | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出                                                                                   |
 | `SANDBOX_DISPLAY_WIDTH`  | 否   | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
 | `SANDBOX_DISPLAY_HEIGHT` | 否   | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上                                                                                          |
-| `TZ`                     | 否   | 时区；镜像默认 `Asia/Shanghai`，可按需覆盖                                                                                                 |
 | `HOME`                   | 否   | 镜像已设为 `/home/sandbox`，一般不用改                                                                                                     |
 | `USER`                   | 否   | 镜像已设为 `sandbox`，一般不用改                                                                                                           |
-| `DISPLAY`                | 否   | 镜像已设为 `:1`，一般不用改                                                                                                                |
-| `LANG`                   | 否   | 镜像已设为 `C.UTF-8`，一般不用改                                                                                                           |
 | `PATH`                   | 否   | 镜像已设（含 `~/.local/bin` 与 Node 24），一般不用改                                                                                       |
 
 ## 端口
@@ -100,7 +97,7 @@ docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
 
 ## Agent 如何和这个沙箱交互
 
-Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 `chrome-cdp` 启动，entrypoint / monitor 会 `playwright-cli attach`）。桌面与 Chrome 窗口分辨率由 `SANDBOX_DISPLAY_WIDTH` / `SANDBOX_DISPLAY_HEIGHT` 控制（默认 `1920`×`1080`）：entrypoint 用其对 `vncserver -geometry`，`chrome-cdp` 用 `--window-position=0,0` 与 `--window-size=${W},${H}`（不再依赖仅 `--start-maximized`），使 CDP 看到的 viewport/window 与设定一致；`:9333` screencast 的 max 宽高也读同一组环境变量。外观 seed 只同步主题/书签栏等，不改窗口状态。公开端口仍是 **6080（noVNC）+ 9333（cdp-view）**；5901 / 9222 仅容器内环回。
+Agent 把本容器当作**可执行命令的远程桌面实例**：不直接映射 CDP 到宿主机，而是用 `docker exec` 进容器，在已有 XFCE / Chrome CDP / `playwright-cli` 会话上操作。业务代码工作目录为 `/home/workspace`；图形会话为 `DISPLAY=:1`；Chrome 远程调试仅监听容器内 `127.0.0.1:9222`（由 dock 的 `launch-chrome-cdp` 冷启动时带起，并 `playwright-cli attach`；关掉 Chrome 后 CDP 一并退出，不再用 monitor 定时拉起）。桌面与 Chrome 窗口分辨率由 `SANDBOX_DISPLAY_WIDTH` / `SANDBOX_DISPLAY_HEIGHT` 控制（默认 `1920`×`1080`）：`start_vnc.sh` 用其对 `vncserver -geometry`，`chrome-cdp` 用 `--window-position=0,0` 与 `--window-size=${W},${H}`，使 CDP viewport 与设定一致；`:9333` screencast 的 max 宽高也读同一组环境变量。公开端口仍是 **6080（noVNC）+ 9333（cdp-view）**；5901 / 9222 仅容器内环回。
 
 以下示例容器名与上文「运行」一致：`sandbox-desktop-test`。
 
@@ -232,9 +229,9 @@ docker logs -f --tail 200 sandbox-desktop-test      # 跟进且先看最近 200 
 容器内自有日志（entrypoint 将后台进程输出重定向到文件）：
 
 ```bash
-# Chrome CDP（含 monitor 重启时的追加输出）
+# Chrome CDP（dock 启动后才有）
 docker exec sandbox-desktop-test cat /home/sandbox/.config/chrome-cdp.log
-# chrome-cdp-view（9333）
+# chrome-cdp-view（9333；Chrome 未开时会空转重试）
 docker exec sandbox-desktop-test cat /home/sandbox/.config/cdp-view.log
 # noVNC / websockify（端口 6080）
 docker exec sandbox-desktop-test cat /home/sandbox/.vnc/novnc-6080.log
