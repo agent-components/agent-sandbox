@@ -5,6 +5,12 @@
 
 ## 浏览器
 
+`launch-chrome-cdp`：未打开时启动浏览器并打开调试端口 `127.0.0.1:9222`；已在前台时最小化；已最小化或不在前台时恢复到前台。关掉浏览器窗口后，调试端口一并退出。
+
+```bash
+launch-chrome-cdp
+```
+
 `playwright-cli` 通过 CDP `http://127.0.0.1:9222` 操作浏览器。
 
 ```bash
@@ -32,4 +38,3 @@ xdotool mousemove 960 540 click 1
 xdotool type 'hello'
 xdotool key Return
 ```
-
