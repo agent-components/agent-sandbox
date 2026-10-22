@@ -11,14 +11,14 @@
 launch-chrome-cdp
 ```
 
-`playwright-cli` 通过 CDP `http://127.0.0.1:9222` 操作浏览器。
+`npx @playwright/cli` 通过 CDP `http://127.0.0.1:9222` 操作浏览器。
 
 ```bash
-playwright-cli attach --cdp=http://127.0.0.1:9222
-playwright-cli goto https://example.com
-playwright-cli snapshot
-playwright-cli click e3
-playwright-cli screenshot --filename=/opt/downloads/shot.png
+npx --yes @playwright/cli attach --cdp=http://127.0.0.1:9222
+npx --yes @playwright/cli goto https://example.com
+npx --yes @playwright/cli snapshot
+npx --yes @playwright/cli click e3
+npx --yes @playwright/cli screenshot --filename=/opt/downloads/shot.png
 ```
 
 ## 桌面截图
@@ -31,7 +31,7 @@ scrot /opt/downloads/desktop.png
 
 ## 桌面键鼠
 
-使用 `xdotool`。页面内操作使用 `playwright-cli`。
+使用 `xdotool`。页面内操作使用 `npx @playwright/cli`。
 
 ```bash
 xdotool mousemove 960 540 click 1

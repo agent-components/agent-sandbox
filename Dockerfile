@@ -13,7 +13,8 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
                /opt/downloads \
                /opt/google-chrome-cdp \
                /opt/log \
-    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp /opt/log
+               /opt/npm/cache \
+    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp /opt/log /opt/npm
 
 COPY --chown=sandbox:sandbox docker/home/ /home/
 COPY docker/usr/local/share/google-chrome-cdp/ /usr/local/share/google-chrome-cdp/
@@ -30,12 +31,12 @@ RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
  && /tmp/install-chrome.sh \
  && chmod -R a+rX /home/sandbox/.local/bin \
  && chmod 755 /home/sandbox/.vnc/xstartup /home/sandbox/.config/tigervnc/xstartup \
- && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp /opt/downloads /opt/log
+ && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp /opt/downloads /opt/log /opt/npm
 
 EXPOSE 6080 9333
 
 USER sandbox
 WORKDIR /home/workspace
-ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:${PATH}" \
+ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:/opt/npm/bin:${PATH}" \
     DISPLAY=:1
 ENTRYPOINT ["/home/entrypoint.sh"]

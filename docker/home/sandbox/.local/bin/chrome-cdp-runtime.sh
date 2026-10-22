@@ -60,6 +60,6 @@ clear_stale_chrome_cdp() {
 }
 
 attach_playwright_cdp() {
-    playwright-cli detach >/dev/null 2>&1 || true
-    playwright-cli attach --cdp=http://127.0.0.1:9222
+    npx --yes @playwright/cli detach >/dev/null 2>&1 || true
+    npx --yes @playwright/cli attach --cdp=http://127.0.0.1:9222
 }

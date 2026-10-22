@@ -30,9 +30,10 @@ want_auto_start_chrome() {
 main() {
     echo "Starting sandbox desktop..."
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
-        /opt/log/chrome-cdp /opt/log/cdp-view /opt/log/novnc /opt/log/panel
+        /opt/log/chrome-cdp /opt/log/cdp-view /opt/log/novnc /opt/log/panel \
+        /opt/npm/cache
     if [ "$(id -u)" = "0" ]; then
-        chown -R sandbox:sandbox /opt/log
+        chown -R sandbox:sandbox /opt/log /opt/npm
     fi
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
