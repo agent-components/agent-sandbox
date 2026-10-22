@@ -8,5 +8,6 @@
 .env
 .env.*
 !.env.example
-docker/home/sandbox/packages/*.deb
+docker/tmp/*.deb
+docker/tmp/node-*-linux-x64.tar.xz
 .verify/

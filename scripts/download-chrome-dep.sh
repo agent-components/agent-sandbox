@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT_DIR="${ROOT}/docker/home/sandbox/packages"
+OUT_DIR="${ROOT}/docker/tmp"
 DEB_NAME="google-chrome-stable_current_amd64.deb"
 URL="https://dl.google.com/linux/direct/${DEB_NAME}"
 OUT="${OUT_DIR}/${DEB_NAME}"

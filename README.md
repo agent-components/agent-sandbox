@@ -14,17 +14,18 @@
 
 ## 目录介绍
 
-| 路径                                          | 用途                                                                      |
-| --------------------------------------------- | ------------------------------------------------------------------------- |
-| `docker/home/sandbox/`                        | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去             |
-| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 Preferences → `/usr/local/share/google-chrome-cdp/`              |
-| `docker/home/entrypoint.sh`                   | 入口编排 → `/home/entrypoint.sh`；调 `start_vnc.sh`，CDP 由 dock 按需启动 |
-| `docker/home/start/`                          | 可选运维脚本 → `/home/start/`（如 `install-cursor-cli.sh`）               |
-| `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底）                                   |
-| `docker/home/sandbox/packages/`               | 本地预取的 Chrome `.deb`（构建用；不进最终镜像 home）                     |
-| `scripts/download-chrome-dep.sh`              | 下载 Chrome `.deb` 到 `packages/`（不打进镜像）                           |
-| `Dockerfile`                                  | 镜像构建                                                                  |
-| `README.md`                                   | 本说明                                                                    |
+| 路径                                          | 用途                                                                             |
+| --------------------------------------------- | -------------------------------------------------------------------------------- |
+| `docker/home/sandbox/`                        | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去                    |
+| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 Preferences → `/usr/local/share/google-chrome-cdp/`                     |
+| `docker/home/entrypoint.sh`                   | 入口编排 → `/home/entrypoint.sh`；调 `start_vnc.sh`，CDP 由 dock 按需启动        |
+| `docker/home/start/`                          | 可选运维脚本 → `/home/start/`（如 `install-cursor-cli.sh`）                      |
+| `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底）                                          |
+| `docker/tmp/`                                 | 预取的 Chrome `.deb` / Node `.tar.xz`，以及构建安装脚本（一次 `COPY` 到 `/tmp`） |
+| `scripts/download-chrome-dep.sh`              | 下载 Chrome `.deb` 到 `docker/tmp/`（不打进 git）                                |
+| `scripts/download-node-dep.sh`                | 下载 Node linux-x64 `.tar.xz` 到 `docker/tmp/`（不打进 git）                     |
+| `Dockerfile`                                  | 镜像构建                                                                         |
+| `README.md`                                   | 本说明                                                                           |
 
 容器内对应布局：入口 `/home/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 默认配置 `/usr/local/share/google-chrome-cdp`；下载目录 `/opt/downloads`。
 
@@ -32,8 +33,9 @@
 
 ```bash
 cd ~/docker-sandbox-desktop
-# 若尚无 .deb，先预取（写入 docker/home/sandbox/packages/）：
+# 若尚无依赖包，先预取（写入 docker/tmp/）：
 ./scripts/download-chrome-dep.sh
+./scripts/download-node-dep.sh
 docker build --platform linux/amd64 -t local/sandbox-desktop:0.1.0 .
 ```
 
