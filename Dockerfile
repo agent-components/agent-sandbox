@@ -62,19 +62,14 @@ RUN set -eux; \
     rm -f /tmp/google-chrome-stable_current_amd64.deb; \
     rm -rf /var/lib/apt/lists/*; \
     google-chrome-stable --version; \
-    # Move install tree off /opt: child images (e.g. billion) bind-mount an empty /opt.
     mkdir -p /usr/local/google; \
     mv /opt/google/chrome /usr/local/google/chrome; \
     rmdir /opt/google 2>/dev/null || true; \
-    # Replace package bin with .real symlink + no-sandbox wrapper.
-    # rm first so printf does not follow a stale symlink into the chrome tree.
     rm -f /usr/bin/google-chrome-stable /usr/bin/google-chrome-stable.real; \
     ln -sfn /usr/local/google/chrome/google-chrome /usr/bin/google-chrome-stable.real; \
-    # Container/qemu need --no-sandbox; keep scripts/chrome-cdp identical to sandbox.
     printf '%s\n' '#!/bin/sh' 'exec /usr/bin/google-chrome-stable.real --no-sandbox --disable-gpu "$@"' \
       > /usr/bin/google-chrome-stable; \
     chmod 755 /usr/bin/google-chrome-stable; \
-    # alternatives: google-chrome -> google-chrome-stable (wrapper); desktop Exec uses same.
     test -x /usr/local/google/chrome/google-chrome; \
     test -x /usr/bin/google-chrome-stable; \
     google-chrome-stable --version
@@ -91,8 +86,6 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
                /opt/downloads \
                /opt/google-chrome-cdp \
     && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp
-# Runtime CDP profile is /opt/google-chrome-cdp (may be wiped by empty /opt mount).
-# Default seed is baked later under /usr/local/share/google-chrome-cdp-seed.
 
 # Node 24 under ~/.local/node-v24 + bin symlinks
 USER sandbox
@@ -116,46 +109,30 @@ RUN set -eux; \
     command -v playwright-cli || ls -la /home/sandbox/.local/node-v24/bin/
 
 USER root
-COPY --chown=sandbox:sandbox scripts/entrypoint.sh /home/sandbox/project/entrypoint.sh
-COPY --chown=sandbox:sandbox scripts/chrome-cdp /home/sandbox/.local/bin/chrome-cdp
-COPY --chown=sandbox:sandbox scripts/single-instance /home/sandbox/.local/bin/single-instance
-COPY --chown=sandbox:sandbox scripts/launch-chrome-cdp /home/sandbox/.local/bin/launch-chrome-cdp
-COPY --chown=sandbox:sandbox scripts/launch-terminal /home/sandbox/.local/bin/launch-terminal
-COPY --chown=sandbox:sandbox scripts/launch-workspace /home/sandbox/.local/bin/launch-workspace
-COPY --chown=sandbox:sandbox scripts/chrome-cdp-runtime.sh /home/sandbox/.local/bin/chrome-cdp-runtime.sh
-COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/bin/chrome-cdp-monitor.sh
-COPY --chown=sandbox:sandbox scripts/panel-keep-below.sh /home/sandbox/.local/bin/panel-keep-below.sh
-COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
-COPY --chown=sandbox:sandbox scripts/install-cursor-cli.sh /home/sandbox/.local/bin/install-cursor-cli.sh
-# TigerVNC 1.15 (trixie) reads ~/.config/tigervnc; keep both paths.
-COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.vnc/xstartup
-COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.config/tigervnc/xstartup
-# xfce-seed: MIME + dock launcher -> ~/.local/bin/chrome-cdp (CDP profile)
-COPY --chown=sandbox:sandbox scripts/xfce-seed/ /home/sandbox/.config/xfce-seed/
-# Custom noVNC lite page (clipboard paste via Ctrl/Cmd+V); used by prepare_novnc_web.
-COPY --chown=sandbox:sandbox scripts/novnc/vnc_lite.html /home/sandbox/.local/share/novnc/vnc_lite.html
+# Repo paths mirror the container: docker/home/sandbox/... → /home/sandbox/...
+COPY --chown=sandbox:sandbox docker/home/sandbox/ /home/sandbox/
+COPY docker/usr/local/share/google-chrome-cdp-seed/ /usr/local/share/google-chrome-cdp-seed/
 
-RUN chmod 755 /home/sandbox/project/entrypoint.sh \
-              /home/sandbox/.local/bin/chrome-cdp \
-              /home/sandbox/.local/bin/single-instance \
-              /home/sandbox/.local/bin/launch-chrome-cdp \
-              /home/sandbox/.local/bin/launch-terminal \
-              /home/sandbox/.local/bin/launch-workspace \
-              /home/sandbox/.local/bin/chrome-cdp-runtime.sh \
-              /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
-              /home/sandbox/.local/bin/panel-keep-below.sh \
-              /home/sandbox/.local/bin/chrome-cdp-view.mjs \
-              /home/sandbox/.local/bin/install-cursor-cli.sh \
-              /home/sandbox/.vnc/xstartup \
-              /home/sandbox/.config/tigervnc/xstartup
-
-# Bake CDP profile seed outside /opt (Classic theme + /opt/downloads).
-# Entrypoint clones into /opt/google-chrome-cdp only when that dir is empty.
-COPY scripts/chrome-cdp-seed/ /usr/local/share/google-chrome-cdp-seed/
-RUN set -eux; \
-    mkdir -p /opt/downloads; \
-    chown -R sandbox:sandbox /usr/local/share/google-chrome-cdp-seed /opt/downloads; \
-    test -f /usr/local/share/google-chrome-cdp-seed/Default/Preferences
+RUN chmod 755 \
+      /home/sandbox/project/entrypoint.sh \
+      /home/sandbox/.local/bin/start_vnc.sh \
+      /home/sandbox/.local/bin/chrome-cdp \
+      /home/sandbox/.local/bin/chrome-cdp-runtime.sh \
+      /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
+      /home/sandbox/.local/bin/chrome-cdp-view.mjs \
+      /home/sandbox/.local/bin/single-instance \
+      /home/sandbox/.local/bin/panel-keep-below.sh \
+      /home/sandbox/.local/bin/launch-chrome-cdp \
+      /home/sandbox/.local/bin/launch-terminal \
+      /home/sandbox/.local/bin/launch-workspace \
+      /home/sandbox/.local/bin/install-cursor-cli.sh \
+      /home/sandbox/.vnc/xstartup \
+      /home/sandbox/.config/tigervnc/xstartup \
+ && chmod 644 /home/sandbox/Desktop/workspace.desktop \
+ && mkdir -p /opt/downloads \
+ && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp-seed /opt/downloads \
+ && test -f /home/sandbox/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml \
+ && test -f /usr/local/share/google-chrome-cdp-seed/Default/Preferences
 
 EXPOSE 6080 9333
 
