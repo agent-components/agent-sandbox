@@ -133,7 +133,7 @@ COPY --chown=sandbox:sandbox scripts/install-cursor-cli.sh /home/sandbox/.local/
 # TigerVNC 1.15 (trixie) reads ~/.config/tigervnc; keep both paths.
 COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.vnc/xstartup
 COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.config/tigervnc/xstartup
-# xfce-seed: panel/helpers point Web Browser -> ~/.local/bin/chrome-cdp (CDP profile)
+# xfce-seed: MIME + dock launcher -> ~/.local/bin/chrome-cdp (CDP profile)
 COPY --chown=sandbox:sandbox scripts/xfce-seed/ /home/sandbox/.config/xfce-seed/
 # Custom noVNC lite page (clipboard + hidden status bar); used by prepare_novnc_web.
 COPY --chown=sandbox:sandbox scripts/novnc/vnc_lite.html /home/sandbox/.local/share/novnc/vnc_lite.html
