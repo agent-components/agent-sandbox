@@ -13,8 +13,8 @@ apt-get update
 apt-get install -y --no-install-recommends \
   /tmp/google-chrome-stable_current_amd64.deb
 rm -f /tmp/google-chrome-stable_current_amd64.deb
-rm -rf /var/lib/apt/lists/*
 google-chrome-stable --version
+
 mkdir -p /usr/local/google
 mv /opt/google/chrome /usr/local/google/chrome
 rmdir /opt/google 2>/dev/null || true

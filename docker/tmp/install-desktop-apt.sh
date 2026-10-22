@@ -24,4 +24,3 @@ dpkg -l fonts-wqy-zenhei tzdata >/dev/null
 ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 echo Asia/Shanghai >/etc/timezone
 printf 'LANG=C.UTF-8\n' >/etc/default/locale
-rm -rf /var/lib/apt/lists/*
