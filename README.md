@@ -130,9 +130,9 @@ dock 与 MIME 默认浏览器都指向 `chrome-cdp`（同一 CDP profile / `:922
 镜像已安装 `scrot`。截取整个桌面：
 
 ```bash
-docker exec -e DISPLAY=:1 <容器> scrot /tmp/desktop.png
+docker exec <容器> scrot /tmp/desktop.png
 # 例：
-docker exec -e DISPLAY=:1 sandbox-desktop-test scrot /tmp/desktop.png
+docker exec sandbox-desktop-test scrot /tmp/desktop.png
 # 拷到宿主机：
 docker cp sandbox-desktop-test:/tmp/desktop.png ./desktop.png
 ```
@@ -145,21 +145,21 @@ docker cp sandbox-desktop-test:/tmp/desktop.png ./desktop.png
 
 ```bash
 # 移动并左键点击（坐标相对桌面）
-docker exec -e DISPLAY=:1 <容器> xdotool mousemove 960 540 click 1
+docker exec <容器> xdotool mousemove 960 540 click 1
 # 例（默认 1920x1080 中心；若改了 SANDBOX_DISPLAY_* 请按实际分辨率调整）：
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 960 540 click 1
+docker exec sandbox-desktop-test xdotool mousemove 960 540 click 1
 
 # 双击 / 右键
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 200 120 click --repeat 2 1
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool mousemove 200 120 click 3
+docker exec sandbox-desktop-test xdotool mousemove 200 120 click --repeat 2 1
+docker exec sandbox-desktop-test xdotool mousemove 200 120 click 3
 
 # 输入文字 / 按键
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool type 'hello'
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool key Return
-docker exec -e DISPLAY=:1 sandbox-desktop-test xdotool key ctrl+l
+docker exec sandbox-desktop-test xdotool type 'hello'
+docker exec sandbox-desktop-test xdotool key Return
+docker exec sandbox-desktop-test xdotool key ctrl+l
 
 # 查窗口并激活后点击（示例：按名称）
-docker exec -e DISPLAY=:1 sandbox-desktop-test bash -lc '
+docker exec sandbox-desktop-test bash -lc '
   wid=$(xdotool search --name "Chrome" | head -1)
   [ -n "$wid" ] && xdotool windowactivate "$wid" mousemove --window "$wid" 100 100 click 1
 '

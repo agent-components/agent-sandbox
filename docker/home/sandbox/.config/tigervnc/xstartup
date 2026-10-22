@@ -5,4 +5,5 @@ export XDG_CURRENT_DESKTOP=XFCE
 export XDG_SESSION_DESKTOP=xfce
 export XDG_SESSION_TYPE=x11
 # Panel seed is bottom dock only (3 launchers). Do not quit xfce4-panel.
+# xfce4-session Count=4 does not start xfdesktop, so the desktop has no right-click menu.
 exec startxfce4

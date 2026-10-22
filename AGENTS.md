@@ -17,19 +17,19 @@ playwright-cli screenshot --filename=/opt/downloads/shot.png
 
 ## 桌面截图
 
-桌面为 `DISPLAY=:1`。使用 `scrot`。
+使用 `scrot`。
 
 ```bash
-DISPLAY=:1 scrot /opt/downloads/desktop.png
+scrot /opt/downloads/desktop.png
 ```
 
 ## 桌面键鼠
 
-桌面为 `DISPLAY=:1`。使用 `xdotool`。页面内操作使用 `playwright-cli`。
+使用 `xdotool`。页面内操作使用 `playwright-cli`。
 
 ```bash
-DISPLAY=:1 xdotool mousemove 960 540 click 1
-DISPLAY=:1 xdotool type 'hello'
-DISPLAY=:1 xdotool key Return
+xdotool mousemove 960 540 click 1
+xdotool type 'hello'
+xdotool key Return
 ```
 

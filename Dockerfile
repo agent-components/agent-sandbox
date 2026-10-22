@@ -33,5 +33,6 @@ EXPOSE 6080 9333
 
 USER sandbox
 WORKDIR /home/workspace
-ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:${PATH}"
+ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:${PATH}" \
+    DISPLAY=:1
 ENTRYPOINT ["/home/entrypoint.sh"]
