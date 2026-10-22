@@ -14,23 +14,24 @@
 
 ## 目录介绍
 
-| 路径 | 用途 |
-|------|------|
-| `Dockerfile` | 镜像构建定义（Debian trixie、桌面组件、Chrome、入口脚本安装） |
-| `README.md` | 本说明：能力、目录、构建与运行 |
-| `scripts/entrypoint.sh` | 容器入口：校验 token、拉起 VNC/XFCE、Chrome CDP、cdp-view 与 monitor |
-| `scripts/chrome-cdp` | Chrome 启动包装：固定 CDP profile 与 `127.0.0.1:9222` |
-| `scripts/chrome-cdp-view.mjs` | `:9333` MJPEG 流出 Chrome 画面；可选 `click` 映射鼠标到 CDP |
-| `scripts/chrome-cdp-monitor.sh` | 周期探测 CDP；挂了则重启 Chrome 并 re-attach `playwright-cli` |
-| `scripts/seed-chrome-cdp-appearance.py` | 构建期写入 `/usr/local/share/google-chrome-cdp-seed`；启动前再把外观偏好从普通 Chrome profile 同步到 CDP profile（可用 `CHROME_CDP_USER_DATA_DIR` 或 argv 指定目标） |
-| `scripts/start-novnc.sh` | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080` |
-| `scripts/install-cursor-cli.sh` | 可选：把 Cursor CLI 装到 `/opt/cursor` 并补齐家目录软链接（仅拷进镜像，构建时不执行） |
-| `scripts/panel-keep-below.sh` | 将 xfce4-panel 设为 keep-below（取消 dock 置顶层），配合 `enable-struts=false` 让最大化/全屏盖住 dock |
-| `scripts/xstartup` | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel` |
-| `scripts/xfce-seed/` | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` + `panel-keep-below.sh` 使最大化/全屏盖住 dock）。entrypoint seed 时按 `SANDBOX_DISPLAY_WIDTH`（或 `xdpyinfo`）把 `position` 写成底边居中 `p=12;x=W/2;y=0` |
-| `scripts/novnc/vnc_lite.html` | 自定义 noVNC lite：隐藏 Connected 条；Ctrl/Cmd+V 同步本地剪贴板进桌面 |
-| `vendor/` | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore） |
-| `.gitignore` | 忽略日志、bak、`.env`、`vendor/*.deb` 等 |
+| 路径                                    | 用途                                                                                                                                                                                                                                                                                                              |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dockerfile`                            | 镜像构建定义（Debian trixie、桌面组件、Chrome、入口脚本安装）                                                                                                                                                                                                                                                     |
+| `README.md`                             | 本说明：能力、目录、构建与运行                                                                                                                                                                                                                                                                                    |
+| `scripts/entrypoint.sh`                 | 容器入口：校验 token、拉起 VNC/XFCE、Chrome CDP、cdp-view 与 monitor                                                                                                                                                                                                                                              |
+| `scripts/chrome-cdp`                    | Chrome 启动包装：固定 CDP profile 与 `127.0.0.1:9222`                                                                                                                                                                                                                                                             |
+| `scripts/chrome-cdp-view.mjs`           | `:9333` MJPEG 流出 Chrome 画面；可选 `click` 映射鼠标到 CDP                                                                                                                                                                                                                                                       |
+| `scripts/chrome-cdp-runtime.sh`         | CDP 启停/最小化/attach 公共函数（entrypoint 与 monitor 共用）                                                                                                                                                                                                                                                     |
+| `scripts/chrome-cdp-monitor.sh`         | 周期探测 CDP；挂了则重启 Chrome 并 re-attach `playwright-cli`                                                                                                                                                                                                                                                     |
+| `scripts/seed-chrome-cdp-appearance.py` | 构建期写入 `/usr/local/share/google-chrome-cdp-seed`；启动前再把外观偏好从普通 Chrome profile 同步到 CDP profile（可用 `CHROME_CDP_USER_DATA_DIR` 或 argv 指定目标）                                                                                                                                              |
+| `scripts/start-novnc.sh`                | 辅助：起 VNC `:1` 与 websockify/noVNC `:6080`                                                                                                                                                                                                                                                                     |
+| `scripts/install-cursor-cli.sh`         | 可选：把 Cursor CLI 装到 `/opt/cursor` 并补齐家目录软链接（仅拷进镜像，构建时不执行）                                                                                                                                                                                                                             |
+| `scripts/panel-keep-below.sh`           | 将 xfce4-panel 设为 keep-below（取消 dock 置顶层），配合 `enable-struts=false` 让最大化/全屏盖住 dock                                                                                                                                                                                                             |
+| `scripts/xstartup`                      | TigerVNC 会话脚本：`exec startxfce4`；若仍出现则退出 `xfce4-panel`                                                                                                                                                                                                                                                |
+| `scripts/xfce-seed/`                    | XFCE 种子：默认浏览器/mime（Web Browser → `chrome-cdp`）；底部三图标 dock（`xfce4-panel.xml` + `gtk-3.0/gtk.css` 圆角半透明胶囊；`enable-struts=false` + `panel-keep-below.sh` 使最大化/全屏盖住 dock）。entrypoint seed 时按 `SANDBOX_DISPLAY_WIDTH`（或 `xdpyinfo`）把 `position` 写成底边居中 `p=12;x=W/2;y=0` |
+| `scripts/novnc/vnc_lite.html`           | 自定义 noVNC lite：隐藏 Connected 条；Ctrl/Cmd+V 同步本地剪贴板进桌面                                                                                                                                                                                                                                             |
+| `vendor/`                               | 可选本地 Chrome `.deb`（网络拉包失败时放入，构建时优先使用；`*.deb` 已 gitignore）                                                                                                                                                                                                                                |
+| `.gitignore`                            | 忽略日志、bak、`.env`、`vendor/*.deb` 等                                                                                                                                                                                                                                                                          |
 
 容器内对应布局：入口 `/home/sandbox/project/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 构建种子 `/usr/local/share/google-chrome-cdp-seed`；下载目录 `/opt/downloads`。
 
@@ -64,27 +65,27 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 
 ## 环境变量
 
-| 变量 | 必需 | 说明 |
-|------|------|------|
-| `NOVNC_TOKEN` | 是 | noVNC 登录 token；缺则 entrypoint 报错退出 |
-| `CDP_VIEW_TOKEN` | 是 | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出 |
-| `SANDBOX_DISPLAY_WIDTH` | 否 | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
-| `SANDBOX_DISPLAY_HEIGHT` | 否 | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上 |
-| `TZ` | 否 | 时区；镜像默认 `Asia/Shanghai`，可按需覆盖 |
-| `HOME` | 否 | 镜像已设为 `/home/sandbox`，一般不用改 |
-| `USER` | 否 | 镜像已设为 `sandbox`，一般不用改 |
-| `DISPLAY` | 否 | 镜像已设为 `:1`，一般不用改 |
-| `LANG` | 否 | 镜像已设为 `C.UTF-8`，一般不用改 |
-| `PATH` | 否 | 镜像已设（含 `~/.local/bin` 与 Node 24），一般不用改 |
+| 变量                     | 必需 | 说明                                                                                                                                       |
+| ------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NOVNC_TOKEN`            | 是   | noVNC 登录 token；缺则 entrypoint 报错退出                                                                                                 |
+| `CDP_VIEW_TOKEN`         | 是   | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出                                                                                   |
+| `SANDBOX_DISPLAY_WIDTH`  | 否   | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
+| `SANDBOX_DISPLAY_HEIGHT` | 否   | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上                                                                                          |
+| `TZ`                     | 否   | 时区；镜像默认 `Asia/Shanghai`，可按需覆盖                                                                                                 |
+| `HOME`                   | 否   | 镜像已设为 `/home/sandbox`，一般不用改                                                                                                     |
+| `USER`                   | 否   | 镜像已设为 `sandbox`，一般不用改                                                                                                           |
+| `DISPLAY`                | 否   | 镜像已设为 `:1`，一般不用改                                                                                                                |
+| `LANG`                   | 否   | 镜像已设为 `C.UTF-8`，一般不用改                                                                                                           |
+| `PATH`                   | 否   | 镜像已设（含 `~/.local/bin` 与 Node 24），一般不用改                                                                                       |
 
 ## 端口
 
-| 端口 | 用途 |
-|------|------|
+| 端口 | 用途                                                                                           |
+| ---- | ---------------------------------------------------------------------------------------------- |
 | 5901 | TigerVNC（**仅**容器内 `localhost`，entrypoint 以 `-localhost yes` 启动；不要 `-p 5901:5901`） |
-| 6080 | noVNC HTTPS（根路径跳转 vnc_lite，**不**带 token；WebSocket 需自行填 token） |
-| 9222 | Chrome CDP（**仅**容器内 `127.0.0.1`；默认不要 `-p` 映射到宿主机，公网更不要 `-p 9222:9222`） |
-| 9333 | chrome-cdp-view MJPEG（需 `?token=`） |
+| 6080 | noVNC HTTPS（根路径跳转 vnc_lite，**不**带 token；WebSocket 需自行填 token）                   |
+| 9222 | Chrome CDP（**仅**容器内 `127.0.0.1`；默认不要 `-p` 映射到宿主机，公网更不要 `-p 9222:9222`）  |
+| 9333 | chrome-cdp-view MJPEG（需 `?token=`）                                                          |
 
 安全：5901 只在容器内环回监听，对外只暴露 **6080 + TokenFile token**（及可选的 9333）。9222 只供容器内进程（playwright-cli / cdp-view）使用。调试：
 

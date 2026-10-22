@@ -14,8 +14,7 @@
 #
 # Note: Chrome CDP sets WM_CLASS instance to "google-chrome (/opt/...)", which
 # contains spaces — never split wmctrl -lx on whitespace for the class field.
-# Multiple --class values are tried in order (e.g. Google-chrome-cdp then
-# Google-chrome during a hot-update transition).
+# Multiple --class values are tried in order when several classes may match.
 set -eu
 
 # Space-separated list of class names (no spaces inside a class name).

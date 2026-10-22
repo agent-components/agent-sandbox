@@ -124,6 +124,7 @@ COPY --chown=sandbox:sandbox scripts/launch-chrome-cdp /home/sandbox/.local/bin/
 COPY --chown=sandbox:sandbox scripts/launch-terminal /home/sandbox/.local/bin/launch-terminal
 COPY --chown=sandbox:sandbox scripts/launch-workspace /home/sandbox/.local/bin/launch-workspace
 COPY --chown=sandbox:sandbox scripts/seed-chrome-cdp-appearance.py /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py
+COPY --chown=sandbox:sandbox scripts/chrome-cdp-runtime.sh /home/sandbox/.local/bin/chrome-cdp-runtime.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/bin/chrome-cdp-monitor.sh
 COPY --chown=sandbox:sandbox scripts/panel-keep-below.sh /home/sandbox/.local/bin/panel-keep-below.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
@@ -144,6 +145,7 @@ RUN chmod 755 /home/sandbox/project/entrypoint.sh \
               /home/sandbox/.local/bin/launch-terminal \
               /home/sandbox/.local/bin/launch-workspace \
               /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py \
+              /home/sandbox/.local/bin/chrome-cdp-runtime.sh \
               /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
               /home/sandbox/.local/bin/panel-keep-below.sh \
               /home/sandbox/.local/bin/chrome-cdp-view.mjs \
