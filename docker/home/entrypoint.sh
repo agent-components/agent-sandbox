@@ -8,6 +8,9 @@ export PATH="$HOME/.local/bin:$PATH"
 export LANG="${LANG:-C.UTF-8}"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
+# .playwright-cli 产物与 daemon 会话落到 /opt，不写 HOME / workspace
+export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-/opt/playwright-cli}"
+export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-/opt/playwright-cli/daemon}"
 export SANDBOX_DISPLAY_WIDTH="${SANDBOX_DISPLAY_WIDTH:-1920}"
 export SANDBOX_DISPLAY_HEIGHT="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 
@@ -31,9 +34,10 @@ main() {
     echo "Starting sandbox desktop..."
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
         /opt/log/chrome-cdp /opt/log/cdp-view /opt/log/novnc /opt/log/panel \
-        /opt/npm/cache
+        /opt/npm/cache \
+        "$PLAYWRIGHT_MCP_OUTPUT_DIR" "$PLAYWRIGHT_DAEMON_SESSION_DIR"
     if [ "$(id -u)" = "0" ]; then
-        chown -R sandbox:sandbox /opt/log /opt/npm
+        chown -R sandbox:sandbox /opt/log /opt/npm /opt/playwright-cli
     fi
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then

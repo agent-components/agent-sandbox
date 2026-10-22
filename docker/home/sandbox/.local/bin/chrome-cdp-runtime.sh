@@ -5,6 +5,8 @@ export HOME="${HOME:-/home/sandbox}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
+export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-/opt/playwright-cli}"
+export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-/opt/playwright-cli/daemon}"
 
 CHROME_CDP_DIR="${CHROME_CDP_DIR:-/opt/google-chrome-cdp}"
 CHROME_CDP_DEFAULT="${CHROME_CDP_DEFAULT:-/usr/local/share/google-chrome-cdp}"
