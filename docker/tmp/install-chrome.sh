@@ -11,8 +11,7 @@ export DEBIAN_FRONTEND=noninteractive
 /tmp/use-debian-mirror.sh
 apt-get update
 apt-get install -y --no-install-recommends \
-  /tmp/google-chrome-stable_current_amd64.deb
-rm -f /tmp/google-chrome-stable_current_amd64.deb
+  /mnt/vendor/google-chrome-stable_current_amd64.deb
 google-chrome-stable --version
 
 mkdir -p /usr/local/google

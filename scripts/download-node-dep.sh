@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NODE_VER="${NODE_VER:-v24.22.0}"
-OUT_DIR="${ROOT}/docker/tmp"
+OUT_DIR="${ROOT}/vendor"
 TAR_NAME="node-${NODE_VER}-linux-x64.tar.xz"
 URL="https://npmmirror.com/mirrors/node/${NODE_VER}/${TAR_NAME}"
 OUT="${OUT_DIR}/${TAR_NAME}"

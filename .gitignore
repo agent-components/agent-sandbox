@@ -8,6 +8,6 @@
 .env
 .env.*
 !.env.example
-docker/tmp/*.deb
-docker/tmp/node-*-linux-x64.tar.xz
+vendor/*.deb
+vendor/node-*-linux-x64.tar.xz
 .verify/
