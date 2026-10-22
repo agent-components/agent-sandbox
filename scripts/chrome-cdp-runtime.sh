@@ -11,15 +11,6 @@ cdp_ready() {
     curl -fsS --max-time 2 http://127.0.0.1:9222/json/version >/dev/null 2>&1
 }
 
-seed_chrome_cdp_appearance() {
-    mkdir -p /opt/google-chrome-cdp/Default
-    if [ -x "$HOME/.local/bin/seed-chrome-cdp-appearance.py" ] || [ -f "$HOME/.local/bin/seed-chrome-cdp-appearance.py" ]; then
-        python3 "$HOME/.local/bin/seed-chrome-cdp-appearance.py" || true
-    else
-        echo "seed-chrome-cdp-appearance.py missing; skipping UI seed" >&2
-    fi
-}
-
 # Minimize CDP Chrome once its X window appears. Entrypoint default start should
 # not cover the desktop; dock toggle remains launch-chrome-cdp / single-instance.
 # CDP on :9222 is unaffected (process + debugging port stay up).
@@ -86,11 +77,9 @@ start_chrome_cdp() {
     rm -f /opt/google-chrome-cdp/SingletonLock \
         /opt/google-chrome-cdp/SingletonCookie \
         /opt/google-chrome-cdp/SingletonSocket
-    # Align CDP profile appearance with normal Chrome UI before launch.
-    seed_chrome_cdp_appearance >>"$HOME/.config/chrome-cdp.log" 2>&1 || true
     DISPLAY=:1 nohup "$HOME/.local/bin/chrome-cdp" \
         --no-first-run --no-default-browser-check about:blank \
-        >> "$HOME/.config/chrome-cdp.log" 2>&1 &
+        > "$HOME/.config/chrome-cdp.log" 2>&1 &
     echo $! > "$HOME/.config/chrome-cdp.pid"
     # Initial start minimized (not dock click toggle). Window may appear after
     # process start; poll in background so CDP wait is not blocked.

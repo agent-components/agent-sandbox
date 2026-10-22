@@ -6,7 +6,7 @@
     noVNC lite page for sandbox-desktop (based on Debian novnc 1.6 vnc_lite.html).
 
     Changes vs package:
-    - Hide #top_bar (Connected / CtrlAltDel overlay)
+    - No top bar / CtrlAltDel overlay
     - Clipboard: Ctrl+V and Mac Command+V sync local browser text into the
       remote desktop via Clipboard API / paste event; Command+V also synthesizes
       Ctrl+V so Linux apps paste (Meta+V alone does not).
@@ -17,7 +17,6 @@
     <title>Desktop</title>
 
     <style>
-
         body {
             margin: 0;
             background-color: dimgrey;
@@ -28,36 +27,13 @@
         html {
             height: 100%;
         }
-
-        #top_bar {
-            display: none !important;
-            background-color: #6e84a3;
-            color: white;
-            font: bold 12px Helvetica;
-            padding: 6px 5px 4px 5px;
-            border-bottom: 1px outset;
-        }
-        #status {
-            text-align: center;
-        }
-        #sendCtrlAltDelButton {
-            position: fixed;
-            top: 0px;
-            right: 0px;
-            border: 1px outset;
-            padding: 5px 5px 4px 5px;
-            cursor: pointer;
-        }
-
         #screen {
-            flex: 1; /* fill remaining space */
+            flex: 1;
             overflow: hidden;
         }
-
     </style>
 
     <script type="module" crossorigin="anonymous">
-        // RFB holds the API to connect and communicate with a VNC server
         import RFB from './core/rfb.js';
 
         // X11 keysyms used when synthesizing Ctrl+V for Mac Command+V.
@@ -65,38 +41,7 @@
         const XK_v = 0x0076;
 
         let rfb;
-        let desktopName;
         let clipSyncing = false;
-
-        function connectedToServer(e) {
-            status("Connected to " + desktopName);
-        }
-
-        function disconnectedFromServer(e) {
-            if (e.detail.clean) {
-                status("Disconnected");
-            } else {
-                status("Something went wrong, connection is closed");
-            }
-        }
-
-        function credentialsAreRequired(e) {
-            const password = prompt("Password required:");
-            rfb.sendCredentials({ password: password });
-        }
-
-        function updateDesktopName(e) {
-            desktopName = e.detail.name;
-        }
-
-        function sendCtrlAltDel() {
-            rfb.sendCtrlAltDel();
-            return false;
-        }
-
-        function status(text) {
-            document.getElementById('status').textContent = text;
-        }
 
         function readQueryVariable(name, defaultValue) {
             const re = new RegExp('.*[?&]' + name + '=([^&#]*)'),
@@ -155,15 +100,10 @@
             rfb.sendKey(XK_Control_L, 'ControlLeft', false);
         }
 
-        document.getElementById('sendCtrlAltDelButton')
-            .onclick = sendCtrlAltDel;
-
         const host = readQueryVariable('host', window.location.hostname);
         let port = readQueryVariable('port', window.location.port);
         const password = readQueryVariable('password');
         const path = readQueryVariable('path', 'websockify');
-
-        status("Connecting");
 
         let url;
         if (window.location.protocol === "https:") {
@@ -180,10 +120,6 @@
         rfb = new RFB(document.getElementById('screen'), url,
                       { credentials: { password: password } });
 
-        rfb.addEventListener("connect",  connectedToServer);
-        rfb.addEventListener("disconnect", disconnectedFromServer);
-        rfb.addEventListener("credentialsrequired", credentialsAreRequired);
-        rfb.addEventListener("desktopname", updateDesktopName);
         rfb.addEventListener("clipboard", onServerClipboard);
 
         rfb.viewOnly = readQueryVariable('view_only', false);
@@ -222,12 +158,6 @@
 </head>
 
 <body>
-    <div id="top_bar">
-        <div id="status">Loading</div>
-        <div id="sendCtrlAltDelButton">Send CtrlAltDel</div>
-    </div>
-    <div id="screen">
-        <!-- This is where the remote screen will appear -->
-    </div>
+    <div id="screen"></div>
 </body>
 </html>

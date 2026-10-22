@@ -1,0 +1,14 @@
+{
+  "download": {
+    "default_directory": "/opt/downloads",
+    "directory_upgrade": true
+  },
+  "savefile": {
+    "default_directory": "/opt/downloads"
+  },
+  "extensions": {
+    "theme": {
+      "system_theme": 0
+    }
+  }
+}

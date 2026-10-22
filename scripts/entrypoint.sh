@@ -35,8 +35,8 @@ prepare_novnc_web() {
     for item in /usr/share/novnc/*; do
         ln -s "$item" "$web_root/$(basename "$item")"
     done
-    # Prefer sandbox-desktop vnc_lite: hidden noVNC top_bar + clipboard paste UI.
-    # Falls back to package file with only #top_bar hidden.
+    # Prefer sandbox-desktop vnc_lite (no top bar; Ctrl/Cmd+V clipboard sync).
+    # Falls back to package file with #top_bar hidden.
     rm -f "$web_root/vnc_lite.html"
     if [ -f "$custom_lite" ]; then
         cp "$custom_lite" "$web_root/vnc_lite.html"
@@ -185,8 +185,6 @@ seed_xfce_workspace_ui() {
     fi
     # Drop any leftover Home icon path from a prior session
     rm -f "$HOME/.config/xfce4/desktop/icons.screen0.yaml"
-    # Keep ~/.config/google-chrome as the UI reference profile (theme/GTK/sidebar).
-    # Panel / default browser still use chrome-cdp (CDP on :9222); do not wipe normal.
 }
 
 # Chrome Default download path is /opt/downloads (prefs seeded below).

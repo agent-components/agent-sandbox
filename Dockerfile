@@ -36,7 +36,6 @@ RUN set -eux; \
         dbus-x11 x11-utils \
         procps psmisc iproute2 \
         xz-utils \
-        openssh-client openssh-server \
         fonts-wqy-zenhei \
         scrot \
         xdotool \
@@ -123,19 +122,17 @@ COPY --chown=sandbox:sandbox scripts/single-instance /home/sandbox/.local/bin/si
 COPY --chown=sandbox:sandbox scripts/launch-chrome-cdp /home/sandbox/.local/bin/launch-chrome-cdp
 COPY --chown=sandbox:sandbox scripts/launch-terminal /home/sandbox/.local/bin/launch-terminal
 COPY --chown=sandbox:sandbox scripts/launch-workspace /home/sandbox/.local/bin/launch-workspace
-COPY --chown=sandbox:sandbox scripts/seed-chrome-cdp-appearance.py /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-runtime.sh /home/sandbox/.local/bin/chrome-cdp-runtime.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-monitor.sh /home/sandbox/.local/bin/chrome-cdp-monitor.sh
 COPY --chown=sandbox:sandbox scripts/panel-keep-below.sh /home/sandbox/.local/bin/panel-keep-below.sh
 COPY --chown=sandbox:sandbox scripts/chrome-cdp-view.mjs /home/sandbox/.local/bin/chrome-cdp-view.mjs
-COPY --chown=sandbox:sandbox scripts/start-novnc.sh /home/sandbox/.local/bin/start-novnc.sh
 COPY --chown=sandbox:sandbox scripts/install-cursor-cli.sh /home/sandbox/.local/bin/install-cursor-cli.sh
 # TigerVNC 1.15 (trixie) reads ~/.config/tigervnc; keep both paths.
 COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.vnc/xstartup
 COPY --chown=sandbox:sandbox scripts/xstartup /home/sandbox/.config/tigervnc/xstartup
 # xfce-seed: MIME + dock launcher -> ~/.local/bin/chrome-cdp (CDP profile)
 COPY --chown=sandbox:sandbox scripts/xfce-seed/ /home/sandbox/.config/xfce-seed/
-# Custom noVNC lite page (clipboard + hidden status bar); used by prepare_novnc_web.
+# Custom noVNC lite page (clipboard paste via Ctrl/Cmd+V); used by prepare_novnc_web.
 COPY --chown=sandbox:sandbox scripts/novnc/vnc_lite.html /home/sandbox/.local/share/novnc/vnc_lite.html
 
 RUN chmod 755 /home/sandbox/project/entrypoint.sh \
@@ -144,27 +141,20 @@ RUN chmod 755 /home/sandbox/project/entrypoint.sh \
               /home/sandbox/.local/bin/launch-chrome-cdp \
               /home/sandbox/.local/bin/launch-terminal \
               /home/sandbox/.local/bin/launch-workspace \
-              /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py \
               /home/sandbox/.local/bin/chrome-cdp-runtime.sh \
               /home/sandbox/.local/bin/chrome-cdp-monitor.sh \
               /home/sandbox/.local/bin/panel-keep-below.sh \
               /home/sandbox/.local/bin/chrome-cdp-view.mjs \
-              /home/sandbox/.local/bin/start-novnc.sh \
               /home/sandbox/.local/bin/install-cursor-cli.sh \
               /home/sandbox/.vnc/xstartup \
               /home/sandbox/.config/tigervnc/xstartup
 
-# Bake CDP profile seed outside /opt so child images that bind-mount an empty
-# /opt still get classic theme + download prefs on first start (entrypoint clones
-# into /opt/google-chrome-cdp only when that dir is empty / missing Preferences).
+# Bake CDP profile seed outside /opt (Classic theme + /opt/downloads).
+# Entrypoint clones into /opt/google-chrome-cdp only when that dir is empty.
+COPY scripts/chrome-cdp-seed/ /usr/local/share/google-chrome-cdp-seed/
 RUN set -eux; \
-    mkdir -p /usr/local/share/google-chrome-cdp-seed; \
-    HOME=/home/sandbox CHROME_CDP_USER_DATA_DIR=/usr/local/share/google-chrome-cdp-seed \
-      python3 /home/sandbox/.local/bin/seed-chrome-cdp-appearance.py; \
-    # seed script also writes ~/.config/google-chrome while USER is root → must chown
-    # or runtime sandbox gets PermissionError on Preferences.
-    chown -R sandbox:sandbox /usr/local/share/google-chrome-cdp-seed \
-      /home/sandbox/.config/google-chrome; \
+    mkdir -p /opt/downloads; \
+    chown -R sandbox:sandbox /usr/local/share/google-chrome-cdp-seed /opt/downloads; \
     test -f /usr/local/share/google-chrome-cdp-seed/Default/Preferences
 
 EXPOSE 6080 9333
