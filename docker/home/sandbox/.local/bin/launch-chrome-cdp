@@ -29,10 +29,10 @@ fi
 # Cold start: prepare profile, start Chrome (CDP flags in chrome-cdp), attach.
 prepare_chrome_profile
 clear_stale_chrome_cdp
-mkdir -p "$HOME/.config"
+mkdir -p "$HOME/.config" /opt/log/chrome-cdp
 nohup "$HOME/.local/bin/chrome-cdp" \
     --no-first-run --no-default-browser-check ${1+"$@"} \
-    >>"$HOME/.config/chrome-cdp.log" 2>&1 &
+    >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
 echo $! >"$HOME/.config/chrome-cdp.pid"
 
 i=0

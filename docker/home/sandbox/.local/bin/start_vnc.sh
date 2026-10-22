@@ -40,19 +40,8 @@ prepare_novnc_web() {
         sed -i 's|#top_bar {|#top_bar { display: none !important;|' \
             "$web_root/vnc_lite.html"
     fi
-    cat > "$web_root/index.html" << 'EOFINNER'
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <title>Desktop</title>
-  <script>
-    location.replace("vnc_lite.html?reconnect=1&resize=scale&path=" + encodeURIComponent("websockify"));
-  </script>
-</head>
-<body></body>
-</html>
-EOFINNER
+    # Package index.html redirects to vnc.html. Desktop is opened via vnc_lite.html directly.
+    rm -f "$web_root/index.html"
 }
 
 ensure_tls_cert() {
@@ -71,12 +60,13 @@ start_websockify() {
     local port="$1"
     local token_file="$2"
     stop_port "$port"
+    mkdir -p /opt/log/novnc
     nohup websockify --web="$HOME/.vnc/novnc-web" \
         --cert="$HOME/.vnc/self.crt" --key="$HOME/.vnc/self.key" \
         --token-plugin TokenFile --token-source "$token_file" \
         --heartbeat=30 \
         "0.0.0.0:${port}" \
-        > "$HOME/.vnc/novnc-${port}.log" 2>&1 &
+        > "/opt/log/novnc/novnc-${port}.log" 2>&1 &
     echo $! > "$HOME/.vnc/novnc-${port}.pid"
 }
 
@@ -90,8 +80,9 @@ start_panel_keep_below() {
             kill "$old" 2>/dev/null || true
         fi
     fi
+    mkdir -p /opt/log/panel
     DISPLAY=:1 nohup "$HOME/.local/bin/panel-keep-below.sh" \
-        > "$HOME/.config/panel-keep-below.log" 2>&1 &
+        > /opt/log/panel/panel-keep-below.log 2>&1 &
     echo $! > "$HOME/.config/panel-keep-below.pid"
     DISPLAY=:1 "$HOME/.local/bin/panel-keep-below.sh" --once >/dev/null 2>&1 || true
 }

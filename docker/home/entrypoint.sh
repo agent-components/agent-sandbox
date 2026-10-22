@@ -24,7 +24,11 @@ stop_port() {
 
 main() {
     echo "Starting sandbox desktop..."
-    mkdir -p "$HOME/.vnc" "$HOME/.config"
+    mkdir -p "$HOME/.vnc" "$HOME/.config" \
+        /opt/log/chrome-cdp /opt/log/cdp-view /opt/log/novnc /opt/log/panel
+    if [ "$(id -u)" = "0" ]; then
+        chown -R sandbox:sandbox /opt/log
+    fi
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
         echo "NOVNC_TOKEN is required" >&2
@@ -48,7 +52,7 @@ main() {
     stop_port 9333
     nohup env CDP_VIEW_TOKEN="$CDP_VIEW_TOKEN" \
         "$HOME/.local/bin/node" "$HOME/.local/bin/chrome-cdp-view.mjs" \
-        > "$HOME/.config/cdp-view.log" 2>&1 &
+        > /opt/log/cdp-view/cdp-view.log 2>&1 &
     echo $! > "$HOME/.config/cdp-view.pid"
 
     echo "Public desktop: port 6080"

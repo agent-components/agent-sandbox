@@ -11,7 +11,8 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
     && mkdir -p /home/workspace \
                /opt/downloads \
                /opt/google-chrome-cdp \
-    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp
+               /opt/log \
+    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp /opt/log
 
 # All sources first
 COPY --chmod=755 docker/tmp/ /tmp/
@@ -25,7 +26,7 @@ RUN /tmp/install-chrome.sh
 
 RUN chmod -R a+rX /home/sandbox/.local/bin \
  && chmod 755 /home/sandbox/.vnc/xstartup /home/sandbox/.config/tigervnc/xstartup \
- && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp /opt/downloads \
+ && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp /opt/downloads /opt/log \
  && rm -rf /tmp/*
 
 EXPOSE 6080 9333

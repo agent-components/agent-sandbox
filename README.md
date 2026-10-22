@@ -2,15 +2,11 @@
 
 ## 问题与能力
 
-需要一个**可本地构建、带图形桌面的 Linux 容器**：浏览器里看桌面（noVNC）、用带 CDP 的 Chrome 做自动化/调试，并可选把 Chrome 画面以 MJPEG 流出（可点击）。本镜像提供这些能力，身份为用户 `sandbox`（uid 1000），业务代码工作目录为 `/home/workspace`。
+本地可构建的 Linux 图形桌面容器。浏览器里看桌面，用 Chrome 做自动化和调试，也可以单独打开 Chrome 画面并点击操作。业务代码放在 `/home/workspace`。
 
-能力概览：
-
-- 桌面：XFCE + TigerVNC + noVNC（HTTPS `:6080`；WebSocket 需自行提供 token，静态页不嵌入）；分辨率由 `SANDBOX_DISPLAY_WIDTH`/`HEIGHT` 控制，默认 `1920x1080`
-- 浏览器：`google-chrome-stable`（安装树在 `/usr/local/google/chrome`，避开子镜像对 `/opt` 的空盘挂载）；经 `chrome-cdp` 固定 CDP profile（`--user-data-dir=/opt/google-chrome-cdp`，`127.0.0.1:9222`，**不**映射到宿主机，无 socat）；构建期默认 profile 在 `/usr/local/share/google-chrome-cdp`（不被 `/opt` 挂载盖住），entrypoint 仅在 `/opt/google-chrome-cdp` 为空或缺 `Default/Preferences` 时 `cp -a` 克隆过去；窗口用 `--window-size` 对齐上述分辨率，CDP viewport 同尺寸；默认下载目录 `/opt/downloads`
-- Chrome 画面：`chrome-cdp-view` MJPEG（`:9333`，需 token；可加 `click=1` 映射鼠标到 CDP）
-- 运行时：Node 24、`playwright-cli`；轻量中文字体 `fonts-wqy-zenhei`
-- 登录 token **仅**运行时环境变量 `NOVNC_TOKEN`、`CDP_VIEW_TOKEN`（镜像不内置默认/随机值；缺则入口报错退出）
+- 桌面：浏览器直接打开，默认 `1920×1080`
+- Chrome：容器内可远程调试，供自动化使用
+- Chrome 画面：可单独查看，并可点击操作
 
 ## 目录介绍
 
@@ -26,6 +22,7 @@
 | `scripts/download-node-dep.sh`                | 下载 Node linux-x64 `.tar.xz` 到 `docker/tmp/`（不打进 git）                     |
 | `Dockerfile`                                  | 镜像构建                                                                         |
 | `README.md`                                   | 本说明                                                                           |
+| `AGENTS.md`                                   | 给 AI 看的容器能力说明：Node / Python、playwright-cli、桌面截图与键鼠            |
 
 容器内对应布局：入口 `/home/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 默认配置 `/usr/local/share/google-chrome-cdp`；下载目录 `/opt/downloads`。
 
@@ -48,13 +45,8 @@ docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g
   -p 6080:6080 -p 9333:9333 \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
-  # 可选：-e SANDBOX_DISPLAY_WIDTH=1920 -e SANDBOX_DISPLAY_HEIGHT=1080 \
   local/sandbox-desktop:0.1.0
 ```
-
-Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-opt seccomp=unconfined`。镜像内对 `/usr/bin/google-chrome-stable` 做了薄包装（`--no-sandbox --disable-gpu`），`/usr/bin/google-chrome-stable.real` → `/usr/local/google/chrome/google-chrome`；`scripts/chrome-cdp` 仍为沙箱原文。Chrome 默认下载目录为 `/opt/downloads`，CDP `--user-data-dir` 为 `/opt/google-chrome-cdp`。构建期把 `docker/usr/local/share/google-chrome-cdp/` 拷进 `/usr/local/share/google-chrome-cdp`（不在 `/opt` 下，空盘挂载盖不掉）；entrypoint 启动时若 `/opt/google-chrome-cdp` 为空或缺 `Default/Preferences` 则 `cp -a` 默认配置过去，已有用户数据则跳过。子镜像若把空卷挂到 `/opt`，需在 root 入口里同样保证 `/opt/downloads` 与 `/opt/google-chrome-cdp` 可写。
-
-运行时必须传入 `NOVNC_TOKEN` 与 `CDP_VIEW_TOKEN`。
 
 ## 环境变量
 
@@ -64,38 +56,18 @@ Apple Silicon 上 `linux/amd64` 经 QEMU 跑 Chrome 时，建议加 `--security-
 | `CDP_VIEW_TOKEN`         | 是   | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出                                                                                   |
 | `SANDBOX_DISPLAY_WIDTH`  | 否   | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
 | `SANDBOX_DISPLAY_HEIGHT` | 否   | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上                                                                                          |
-| `HOME`                   | 否   | 镜像已设为 `/home/sandbox`，一般不用改                                                                                                     |
-| `USER`                   | 否   | 镜像已设为 `sandbox`，一般不用改                                                                                                           |
-| `PATH`                   | 否   | 镜像已设（含 `~/.local/bin` 与 Node 24），一般不用改                                                                                       |
 
 ## 端口
 
-| 端口 | 用途                                                                                           |
-| ---- | ---------------------------------------------------------------------------------------------- |
-| 5901 | TigerVNC（**仅**容器内 `localhost`，entrypoint 以 `-localhost yes` 启动；不要 `-p 5901:5901`） |
-| 6080 | noVNC HTTPS（根路径跳转 vnc_lite，**不**带 token；WebSocket 需自行填 token）                   |
-| 9222 | Chrome CDP（**仅**容器内 `127.0.0.1`；默认不要 `-p` 映射到宿主机，公网更不要 `-p 9222:9222`）  |
-| 9333 | chrome-cdp-view MJPEG（需 `?token=`）                                                          |
-
-安全：5901 只在容器内环回监听，对外只暴露 **6080 + TokenFile token**（及可选的 9333）。9222 只供容器内进程（playwright-cli / cdp-view）使用。调试：
-
-```bash
-docker exec sandbox-desktop-test curl -s http://127.0.0.1:9222/json/version
-```
+| 端口 | 用途                                  |
+| ---- | ------------------------------------- |
+| 6080 | noVNC HTTPS                           |
+| 9333 | chrome-cdp-view MJPEG（需 `?token=`） |
 
 ## 访问
 
-- 桌面: https://127.0.0.1:6080/（自签证书需浏览器放行）
-  - 根路径会跳到 `vnc_lite.html`，**不会**在 URL/静态页里嵌入 `NOVNC_TOKEN`
-  - 底部 dock（终端 / workspace / Chrome CDP）；无 Applications/时钟/用户顶栏。Chrome 仍由入口 `chrome-cdp` 自动拉起
-  - **剪贴板**：桌面焦点下 Ctrl+V 或 Mac Command+V 会把浏览器剪贴板同步进远程桌面并粘贴（需浏览器剪贴板权限；Cmd+V 会转成远程 Ctrl+V）
-  - 连接前在 noVNC Settings 把 **path** 设为：`websockify?token=你的NOVNC_TOKEN`，再 Connect
-  - 或手动打开（自行替换 token）：
-    `https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token`
-  - websockify 仍用 TokenFile 校验；未带正确 token 时 WebSocket 会失败
-- Chrome 画面: http://127.0.0.1:9333/?token=local-cdp-token
-- 可点击操作（映射到 CDP `Input.dispatchMouseEvent`）: 加 `&click=1` 或 `&interactive=1`
-  例: http://127.0.0.1:9333/?token=local-cdp-token&click=1
+- 桌面：打开 [https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token](https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token) （自签证书需浏览器放行）。底部 dock（终端 / workspace / Chrome CDP）；无 Applications/时钟/用户顶栏。Chrome 仍由入口 `chrome-cdp` 自动拉起
+- Chrome 画面：打开 [http://127.0.0.1:9333/?token=local-cdp-token&click=1](http://127.0.0.1:9333/?token=local-cdp-token&click=1)
 
 ## Agent 如何和这个沙箱交互
 
@@ -213,28 +185,4 @@ docker exec sandbox-desktop-test bash -lc '
   # 元素：先 snapshot 拿 ref，再截该元素
   playwright-cli screenshot e3 --filename=/home/workspace/el.png
 '
-```
-
-## 日志
-
-以下假设容器名为 `sandbox-desktop-test`（与上文「运行」一致）。
-
-查看容器标准输出/错误（entrypoint 主日志）：
-
-```bash
-docker logs sandbox-desktop-test
-docker logs -f sandbox-desktop-test                 # 持续跟进
-docker logs --tail 100 sandbox-desktop-test         # 最近 100 行
-docker logs -f --tail 200 sandbox-desktop-test      # 跟进且先看最近 200 行
-```
-
-容器内自有日志（entrypoint 将后台进程输出重定向到文件）：
-
-```bash
-# Chrome CDP（dock 启动后才有）
-docker exec sandbox-desktop-test cat /home/sandbox/.config/chrome-cdp.log
-# chrome-cdp-view（9333；Chrome 未开时会空转重试）
-docker exec sandbox-desktop-test cat /home/sandbox/.config/cdp-view.log
-# noVNC / websockify（端口 6080）
-docker exec sandbox-desktop-test cat /home/sandbox/.vnc/novnc-6080.log
 ```

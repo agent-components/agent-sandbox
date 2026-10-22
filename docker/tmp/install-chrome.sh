@@ -8,6 +8,7 @@ if [ "${TARGETARCH:-}" != "amd64" ]; then
 fi
 
 export DEBIAN_FRONTEND=noninteractive
+/tmp/use-debian-mirror.sh
 apt-get update
 apt-get install -y --no-install-recommends \
   /tmp/google-chrome-stable_current_amd64.deb
