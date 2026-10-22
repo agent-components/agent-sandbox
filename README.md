@@ -10,20 +10,20 @@
 
 ## 目录介绍
 
-| 路径                                          | 用途                                                                                  |
-| --------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `docker/home/sandbox/`                        | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去                         |
-| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 Preferences → `/usr/local/share/google-chrome-cdp/`                          |
-| `docker/home/entrypoint.sh`                   | 入口编排 → `/home/entrypoint.sh`；调 `start_vnc.sh`，CDP 由 dock 按需启动             |
-| `docker/home/start/`                          | 可选运维脚本 → `/home/start/`（如 `install-cursor-cli.sh`）                           |
-| `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底）                                               |
-| `vendor/`                                     | 预取的 Chrome `.deb` / Node `.tar.xz`；构建时只读 bind 到 `/mnt/vendor`，不打进镜像层 |
-| `docker/tmp/`                                 | 构建安装脚本；复制到容器 `/tmp` 后执行                                                |
-| `scripts/download-chrome-dep.sh`              | 下载 Chrome `.deb` 到 `vendor/`（不打进 git）                                         |
-| `scripts/download-node-dep.sh`                | 下载 Node linux-x64 `.tar.xz` 到 `vendor/`（不打进 git）                              |
-| `Dockerfile`                                  | 镜像构建                                                                              |
-| `README.md`                                   | 本说明                                                                                |
-| `AGENTS.md`                                   | 给 AI 看的容器能力说明：Node / Python、playwright-cli、桌面截图与键鼠                 |
+| 路径                                          | 用途                                                                                                                      |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `docker/home/sandbox/`                        | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去                                                             |
+| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 Preferences → `/usr/local/share/google-chrome-cdp/`                                                              |
+| `docker/home/entrypoint.sh`                   | 入口编排 → `/home/entrypoint.sh`；调 `start_vnc.sh`；Chrome/CDP 默认 dock 按需，或 `SANDBOX_AUTO_START_CHROME=1` 开机自启 |
+| `docker/home/start/`                          | 可选运维脚本 → `/home/start/`（如 `install-cursor-cli.sh`）                                                               |
+| `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底）                                                                                   |
+| `vendor/`                                     | 预取的 Chrome `.deb` / Node `.tar.xz`；构建时只读 bind 到 `/mnt/vendor`，不打进镜像层                                     |
+| `docker/tmp/`                                 | 构建安装脚本；复制到容器 `/tmp` 后执行                                                                                    |
+| `scripts/download-chrome-dep.sh`              | 下载 Chrome `.deb` 到 `vendor/`（不打进 git）                                                                             |
+| `scripts/download-node-dep.sh`                | 下载 Node linux-x64 `.tar.xz` 到 `vendor/`（不打进 git）                                                                  |
+| `Dockerfile`                                  | 镜像构建                                                                                                                  |
+| `README.md`                                   | 本说明                                                                                                                    |
+| `AGENTS.md`                                   | 给 AI 看的容器能力说明：Node / Python、playwright-cli、桌面截图与键鼠                                                     |
 
 容器内对应布局：入口 `/home/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 默认配置 `/usr/local/share/google-chrome-cdp`；下载目录 `/opt/downloads`。
 
@@ -51,12 +51,13 @@ docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g
 
 ## 环境变量
 
-| 变量                     | 必需 | 说明                                                                                                                                       |
-| ------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `NOVNC_TOKEN`            | 是   | noVNC 登录 token；缺则 entrypoint 报错退出                                                                                                 |
-| `CDP_VIEW_TOKEN`         | 是   | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出                                                                                   |
-| `SANDBOX_DISPLAY_WIDTH`  | 否   | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
-| `SANDBOX_DISPLAY_HEIGHT` | 否   | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上                                                                                          |
+| 变量                        | 必需 | 说明                                                                                                                                       |
+| --------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NOVNC_TOKEN`               | 是   | noVNC 登录 token；缺则 entrypoint 报错退出                                                                                                 |
+| `CDP_VIEW_TOKEN`            | 是   | chrome-cdp-view（9333）访问 token；缺则入口/服务报错退出                                                                                   |
+| `SANDBOX_AUTO_START_CHROME` | 否   | `1` 开机自动执行 `launch-chrome-cdp`；`0` 或未设置则不自动启动，由 dock 按需打开                                                           |
+| `SANDBOX_DISPLAY_WIDTH`     | 否   | 桌面 / Chrome 窗口宽度（像素）；默认 `1920`。entrypoint 传给 `vncserver -geometry`，`chrome-cdp` 用 `--window-size`；CDP viewport 与此一致 |
+| `SANDBOX_DISPLAY_HEIGHT`    | 否   | 桌面 / Chrome 窗口高度（像素）；默认 `1080`。同上                                                                                          |
 
 ## 端口
 
@@ -67,5 +68,5 @@ docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g
 
 ## 访问
 
-- 桌面：打开 [https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token](https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token) （自签证书需浏览器放行）。底部 dock（终端 / workspace / Chrome CDP）；无 Applications/时钟/用户顶栏。Chrome 仍由入口 `chrome-cdp` 自动拉起
+- 桌面：打开 [https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token](https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token) （自签证书需浏览器放行）。底部 dock（终端 / workspace / Chrome CDP）；无 Applications/时钟/用户顶栏。`SANDBOX_AUTO_START_CHROME=1` 开机自启 Chrome，否则仅 dock 按需打开
 - Chrome 画面：打开 [http://127.0.0.1:9333/?token=local-cdp-token&click=1](http://127.0.0.1:9333/?token=local-cdp-token&click=1)

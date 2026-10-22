@@ -1,5 +1,6 @@
 #!/bin/bash
-# Container entrypoint: desktop via start_vnc.sh; Chrome/CDP only when dock launches it.
+# Container entrypoint: desktop via start_vnc.sh.
+# Chrome/CDP: dock on demand, or boot auto-start when SANDBOX_AUTO_START_CHROME=1.
 set -euo pipefail
 
 export HOME="${HOME:-/home/sandbox}"
@@ -20,6 +21,10 @@ stop_port() {
     for pid in $pids; do
         kill "$pid" 2>/dev/null || true
     done
+}
+
+want_auto_start_chrome() {
+    [ "${SANDBOX_AUTO_START_CHROME:-0}" = "1" ]
 }
 
 main() {
@@ -45,18 +50,29 @@ main() {
     fi
     "$HOME/.local/bin/start_vnc.sh"
 
-    # Profile ready for first dock click; do not start Chrome/CDP here.
+    # Profile ready for dock or boot auto-start.
     prepare_chrome_profile
 
-    # MJPEG view waits until Chrome (and CDP) are started from the dock.
+    # MJPEG view waits until Chrome (and CDP) are up.
     stop_port 9333
     nohup env CDP_VIEW_TOKEN="$CDP_VIEW_TOKEN" \
         "$HOME/.local/bin/node" "$HOME/.local/bin/chrome-cdp-view.mjs" \
         > /opt/log/cdp-view/cdp-view.log 2>&1 &
     echo $! > "$HOME/.config/cdp-view.pid"
 
+    if want_auto_start_chrome; then
+        echo "SANDBOX_AUTO_START_CHROME enabled; launching Chrome CDP..."
+        if [ ! -x "$HOME/.local/bin/launch-chrome-cdp" ]; then
+            echo "launch-chrome-cdp missing at $HOME/.local/bin/launch-chrome-cdp" >&2
+            exit 1
+        fi
+        "$HOME/.local/bin/launch-chrome-cdp"
+        echo "Chrome CDP auto-started; view :9333"
+    else
+        echo "Chrome CDP starts when dock launches Chrome; view :9333 after that"
+    fi
+
     echo "Public desktop: port 6080"
-    echo "Chrome CDP starts when dock launches Chrome; view :9333 after that"
 
     while true; do
         sleep 3600
