@@ -2,6 +2,10 @@
 # Dock launcher: single Chrome window. First open starts Chrome+CDP and attaches
 # playwright; later clicks toggle via single-instance. Closing Chrome drops CDP
 # until the next dock launch (no background monitor).
+#
+# Rapid dock clicks used to race the cold-start path (window not mapped yet) and
+# each call cleared SingletonLock — spawning multiple Chromes. Serialize with
+# flock and treat "CDP already up" as an in-progress / running instance.
 set -euo pipefail
 
 export HOME="${HOME:-/home/sandbox}"
@@ -11,6 +15,9 @@ export DISPLAY="${DISPLAY:-:1}"
 # shellcheck source=/dev/null
 . "$HOME/.local/bin/chrome-cdp-runtime.sh"
 
+LOCK_FILE="${HOME}/.config/chrome-cdp.launch.lock"
+mkdir -p "$HOME/.config"
+
 chrome_window_open() {
     wmctrl -lx 2>/dev/null | awk '
         BEGIN { IGNORECASE = 1 }
@@ -19,17 +26,53 @@ chrome_window_open() {
     '
 }
 
-# Already running: focus / minimize only.
-if chrome_window_open; then
+toggle_chrome_window() {
     exec "$HOME/.local/bin/single-instance" \
         --class Google-chrome-cdp \
         -- "$HOME/.local/bin/chrome-cdp" "$@"
+}
+
+# Wait briefly for the WM window after CDP is up (map can lag the port).
+wait_for_chrome_window() {
+    local i=0
+    while [ "$i" -lt 20 ]; do
+        if chrome_window_open; then
+            return 0
+        fi
+        i=$((i + 1))
+        sleep 0.25
+    done
+    return 1
+}
+
+# Hold exclusive lock for the whole launch decision (including cold start).
+exec 9>"$LOCK_FILE"
+if ! flock -w 60 9; then
+    echo "launch-chrome-cdp: could not acquire launch lock" >&2
+    exit 1
+fi
+
+# Already mapped: focus / minimize only.
+if chrome_window_open; then
+    toggle_chrome_window "$@"
+fi
+
+# CDP up but window not yet mapped (or another click lost the race): wait, then
+# toggle — do not clear SingletonLock or start another Chrome.
+if cdp_ready; then
+    wait_for_chrome_window || true
+    if chrome_window_open; then
+        toggle_chrome_window "$@"
+    fi
+    # Port alive but no matching window — stay attached; avoid a second instance.
+    echo "launch-chrome-cdp: CDP is up but no Google-chrome-cdp window; not starting another" >&2
+    exit 0
 fi
 
 # Cold start: prepare profile, start Chrome (CDP flags in chrome-cdp), attach.
 prepare_chrome_profile
 clear_stale_chrome_cdp
-mkdir -p "$HOME/.config" /opt/log/chrome-cdp
+mkdir -p /opt/log/chrome-cdp
 nohup "$HOME/.local/bin/chrome-cdp" \
     --no-first-run --no-default-browser-check ${1+"$@"} \
     >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
