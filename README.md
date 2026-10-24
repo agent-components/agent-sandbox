@@ -13,7 +13,7 @@
 | 路径                                          | 用途                                                                                                                      |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `docker/home/sandbox/`                        | 与容器 `/home/sandbox/` 同构；Dockerfile 一次 `COPY` 映射进去                                                             |
-| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 Preferences → `/usr/local/share/google-chrome-cdp/`                                                              |
+| `docker/usr/local/share/google-chrome-cdp/`   | CDP 默认 profile 种子 → `/usr/local/share/google-chrome-cdp/`（`Default/Preferences`、可选 `Default/Bookmarks`）          |
 | `docker/home/entrypoint.sh`                   | 入口编排 → `/home/entrypoint.sh`；调 `start_vnc.sh`；Chrome/CDP 默认 dock 按需，或 `SANDBOX_AUTO_START_CHROME=1` 开机自启 |
 | `docker/home/start/`                          | 可选运维脚本 → `/home/start/`（如 `install-cursor-cli.sh`）                                                               |
 | `docker/home/sandbox/.local/bin/start_vnc.sh` | 虚拟桌面启动（VNC / noVNC / dock 置底）                                                                                   |
@@ -26,6 +26,18 @@
 | `AGENTS.md`                                   | 给 AI 看的容器能力说明：Node / Python、playwright-cli、桌面截图与键鼠                                                     |
 
 容器内对应布局：入口 `/home/entrypoint.sh`；可执行脚本在 `/home/sandbox/.local/bin/`；VNC 相关在 `/home/sandbox/.vnc/`；`WORKDIR=/home/workspace` 只放后续业务/仓库代码。Chrome 二进制在 `/usr/local/google/chrome`；CDP 运行时 profile `/opt/google-chrome-cdp`；CDP 默认配置 `/usr/local/share/google-chrome-cdp`；下载目录 `/opt/downloads`。
+
+### 下游默认书签
+
+空 `/opt/google-chrome-cdp` 会整树克隆默认目录；**持久化 `/opt` 后不会再整树克隆**。若默认树有 `Default/Bookmarks`，会在首次准备 profile 时写入一次，之后用 `.bookmarks-seeded` 标记，不再覆盖（视为用户可能已改）。书签栏是否显示由 `Default/Preferences` 的 `bookmark_bar.show_on_all_tabs` 控制（随 Preferences 首次克隆）。
+
+下游镜像 `COPY` 或启动时挂载即可：
+
+```bash
+-v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro"
+```
+
+`Bookmarks` 为 Chrome 原生 JSON（含 `roots.bookmark_bar` 等）。要重新应用默认书签，需删掉运行时的 `.bookmarks-seeded`（或清空整个 `/opt/google-chrome-cdp`）。
 
 ## 构建
 

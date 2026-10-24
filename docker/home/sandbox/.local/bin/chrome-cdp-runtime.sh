@@ -29,7 +29,32 @@ chrome_cdp_needs_default() {
     return 1
 }
 
-# Clone baked Preferences into /opt when empty (empty /opt volume safe).
+# Seed Bookmarks once from the default tree (even when /opt profile already exists).
+# Downstream images / bind-mounts place Bookmarks at:
+#   $CHROME_CDP_DEFAULT/Default/Bookmarks
+# After the first successful seed, leave the runtime Bookmarks alone (user may edit).
+# Bookmark bar visibility belongs in Default/Preferences (cloned with the profile).
+seed_chrome_bookmarks_once() {
+    local src="$CHROME_CDP_DEFAULT/Default/Bookmarks"
+    local dst="$CHROME_CDP_DIR/Default/Bookmarks"
+    local stamp="$CHROME_CDP_DIR/.bookmarks-seeded"
+
+    # Already seeded (or legacy hash stamp from earlier sync logic).
+    if [ -f "$stamp" ] || [ -f "$CHROME_CDP_DIR/.bookmarks-seed-sha" ]; then
+        [ -f "$stamp" ] || : >"$stamp"
+        return 0
+    fi
+    if [ ! -f "$src" ]; then
+        return 0
+    fi
+
+    mkdir -p "$CHROME_CDP_DIR/Default"
+    cp -a "$src" "$dst"
+    : >"$stamp"
+    echo "Chrome CDP seeded Bookmarks once from $src -> $dst" >&2
+}
+
+# Clone baked defaults into /opt when empty; seed Bookmarks at most once afterward.
 prepare_chrome_profile() {
     mkdir -p /opt/downloads "$CHROME_CDP_DIR"
     if chrome_cdp_needs_default "$CHROME_CDP_DIR"; then
@@ -40,6 +65,7 @@ prepare_chrome_profile() {
             echo "Chrome CDP default missing at $CHROME_CDP_DEFAULT; starting with empty profile" >&2
         fi
     fi
+    seed_chrome_bookmarks_once
     if [ "$(id -u)" = "0" ]; then
         chown -R sandbox:sandbox /opt/downloads "$CHROME_CDP_DIR" 2>/dev/null || true
     fi

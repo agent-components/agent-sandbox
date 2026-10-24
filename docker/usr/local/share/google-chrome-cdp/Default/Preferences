@@ -1,4 +1,7 @@
 {
+  "bookmark_bar": {
+    "show_on_all_tabs": true
+  },
   "download": {
     "default_directory": "/opt/downloads",
     "directory_upgrade": true
