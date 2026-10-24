@@ -19,6 +19,7 @@ RUN useradd -m -u 1000 -s /bin/bash sandbox \
 
 COPY --chown=sandbox:sandbox docker/home/ /home/
 COPY docker/usr/local/share/google-chrome-cdp/ /usr/local/share/google-chrome-cdp/
+COPY docker/etc/xdg/xfce4/kiosk/ /etc/xdg/xfce4/kiosk/
 COPY docker/tmp/ /tmp/
 
 # Bind prefetched Chrome/Node from vendor (not image layers), then run the install scripts in /tmp.
