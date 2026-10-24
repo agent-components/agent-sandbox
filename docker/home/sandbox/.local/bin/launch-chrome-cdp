@@ -3,9 +3,9 @@
 # playwright; later clicks toggle via single-instance. Closing Chrome drops CDP
 # until the next dock launch (no background monitor).
 #
-# Rapid dock clicks used to race the cold-start path (window not mapped yet) and
-# each call cleared SingletonLock — spawning multiple Chromes. Serialize with
-# flock and treat "CDP already up" as an in-progress / running instance.
+# Rapid dock clicks race the slow cold-start (window/CDP not ready yet). Serialize
+# with flock; if a profile Chrome is already starting/running, wait and toggle —
+# never clear SingletonLock or spawn another instance.
 set -euo pipefail
 
 export HOME="${HOME:-/home/sandbox}"
@@ -26,28 +26,41 @@ chrome_window_open() {
     '
 }
 
+# Any process using this profile (main or zygote) means an instance exists.
+chrome_profile_running() {
+    pgrep -f "user-data-dir=${CHROME_CDP_DIR}" >/dev/null 2>&1
+}
+
 toggle_chrome_window() {
     exec "$HOME/.local/bin/single-instance" \
         --class Google-chrome-cdp \
         -- "$HOME/.local/bin/chrome-cdp" "$@"
 }
 
-# Wait briefly for the WM window after CDP is up (map can lag the port).
-wait_for_chrome_window() {
+# Wait for WM window and/or CDP after another launch is in progress.
+wait_for_existing_chrome() {
     local i=0
-    while [ "$i" -lt 20 ]; do
+    while [ "$i" -lt 60 ]; do
         if chrome_window_open; then
             return 0
         fi
-        i=$((i + 1))
-        sleep 0.25
+        if cdp_ready && chrome_window_open; then
+            return 0
+        fi
+        # Still starting: keep waiting while profile processes exist or CDP is up.
+        if chrome_profile_running || cdp_ready; then
+            i=$((i + 1))
+            sleep 0.25
+            continue
+        fi
+        return 1
     done
-    return 1
+    chrome_window_open
 }
 
-# Hold exclusive lock for the whole launch decision (including cold start).
+# Exclusive lock for the whole launch decision (including cold start + CDP wait).
 exec 9>"$LOCK_FILE"
-if ! flock -w 60 9; then
+if ! flock -w 90 9; then
     echo "launch-chrome-cdp: could not acquire launch lock" >&2
     exit 1
 fi
@@ -57,15 +70,13 @@ if chrome_window_open; then
     toggle_chrome_window "$@"
 fi
 
-# CDP up but window not yet mapped (or another click lost the race): wait, then
-# toggle — do not clear SingletonLock or start another Chrome.
-if cdp_ready; then
-    wait_for_chrome_window || true
-    if chrome_window_open; then
+# Profile Chrome already running / CDP up (slow first start, or lost the race):
+# wait for the window and toggle — do not clear locks or start another.
+if chrome_profile_running || cdp_ready; then
+    if wait_for_existing_chrome; then
         toggle_chrome_window "$@"
     fi
-    # Port alive but no matching window — stay attached; avoid a second instance.
-    echo "launch-chrome-cdp: CDP is up but no Google-chrome-cdp window; not starting another" >&2
+    echo "launch-chrome-cdp: Chrome profile already active; not starting another" >&2
     exit 0
 fi
 

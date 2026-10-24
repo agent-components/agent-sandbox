@@ -72,6 +72,8 @@ prepare_chrome_profile() {
 }
 
 # Drop leftover Chrome/CDP before a cold start (no auto-restart monitor).
+# Only wipe Singleton* after processes are gone — clearing them while a start is
+# in flight is what lets a second dock click spawn another Chrome.
 clear_stale_chrome_cdp() {
     if [ -f "$HOME/.config/chrome-cdp.pid" ]; then
         kill "$(tr -d '[:space:]' < "$HOME/.config/chrome-cdp.pid")" 2>/dev/null || true
@@ -81,7 +83,16 @@ clear_stale_chrome_cdp() {
     for pid in $pids; do
         kill "$pid" 2>/dev/null || true
     done
-    sleep 1
+    # Best-effort stop of any profile Chrome left without a listening CDP.
+    pkill -f "user-data-dir=${CHROME_CDP_DIR}" 2>/dev/null || true
+    local i=0
+    while [ "$i" -lt 20 ]; do
+        if ! pgrep -f "user-data-dir=${CHROME_CDP_DIR}" >/dev/null 2>&1; then
+            break
+        fi
+        i=$((i + 1))
+        sleep 0.1
+    done
     rm -f "$CHROME_CDP_DIR/SingletonLock" \
         "$CHROME_CDP_DIR/SingletonCookie" \
         "$CHROME_CDP_DIR/SingletonSocket"
