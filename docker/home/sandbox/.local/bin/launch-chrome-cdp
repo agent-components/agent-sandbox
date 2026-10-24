@@ -1,11 +1,13 @@
 #!/bin/bash
-# Dock launcher: single Chrome window. First open starts Chrome+CDP and attaches
-# playwright; later clicks toggle via single-instance. Closing Chrome drops CDP
-# until the next dock launch (no background monitor).
+# Dock launcher: one Chrome CDP instance.
 #
-# Rapid dock clicks race the slow cold-start (window/CDP not ready yet). Serialize
-# with flock; if a profile Chrome is already starting/running, wait and toggle —
-# never clear SingletonLock or spawn another instance.
+# Truth sources (in order):
+#   1) WM window  — minimize / restore / focus
+#   2) profile process / CDP — already running (even if no window yet)
+#   3) starting lock file — cold start in flight (short-lived only)
+#
+# The lock file is NOT a full UI state machine. It only means "starting",
+# with an mtime TTL so a crashed launcher cannot block forever.
 set -euo pipefail
 
 export HOME="${HOME:-/home/sandbox}"
@@ -15,90 +17,211 @@ export DISPLAY="${DISPLAY:-:1}"
 # shellcheck source=/dev/null
 . "$HOME/.local/bin/chrome-cdp-runtime.sh"
 
-LOCK_FILE="${HOME}/.config/chrome-cdp.launch.lock"
+START_LOCK="${HOME}/.config/chrome-cdp.starting"
+START_LOCK_TTL_SECS="${CHROME_CDP_START_LOCK_TTL_SECS:-90}"
+CLASS="Google-chrome-cdp"
+
 mkdir -p "$HOME/.config"
 
-chrome_window_open() {
-    wmctrl -lx 2>/dev/null | awk '
-        BEGIN { IGNORECASE = 1 }
-        /\.Google-chrome-cdp[[:space:]]/ { found = 1; exit }
-        END { exit !found }
-    '
-}
+# --- probes ----------------------------------------------------------------
 
-# Any process using this profile (main or zygote) means an instance exists.
-chrome_profile_running() {
+profile_running() {
     pgrep -f "user-data-dir=${CHROME_CDP_DIR}" >/dev/null 2>&1
 }
 
-toggle_chrome_window() {
-    exec "$HOME/.local/bin/single-instance" \
-        --class Google-chrome-cdp \
-        -- "$HOME/.local/bin/chrome-cdp" "$@"
+list_wids() {
+    wmctrl -lx 2>/dev/null | awk -v cls="$CLASS" '
+        BEGIN { IGNORECASE = 1 }
+        $0 ~ ("\\." cls "[[:space:]]") { print $1 }
+    '
 }
 
-# Wait for WM window and/or CDP after another launch is in progress.
-wait_for_existing_chrome() {
-    local i=0
-    while [ "$i" -lt 60 ]; do
-        if chrome_window_open; then
-            return 0
-        fi
-        if cdp_ready && chrome_window_open; then
-            return 0
-        fi
-        # Still starting: keep waiting while profile processes exist or CDP is up.
-        if chrome_profile_running || cdp_ready; then
-            i=$((i + 1))
-            sleep 0.25
-            continue
-        fi
-        return 1
-    done
-    chrome_window_open
+wid_dec() {
+    printf '%d' "$1" 2>/dev/null || printf '0'
 }
 
-# Exclusive lock for the whole launch decision (including cold start + CDP wait).
-exec 9>"$LOCK_FILE"
-if ! flock -w 90 9; then
-    echo "launch-chrome-cdp: could not acquire launch lock" >&2
-    exit 1
-fi
+window_hidden() {
+    local wid="$1" s
+    s="$(xprop -id "$wid" _NET_WM_STATE 2>/dev/null || true)"
+    case "$s" in *_NET_WM_STATE_HIDDEN*) return 0 ;; esac
+    s="$(xprop -id "$wid" WM_STATE 2>/dev/null || true)"
+    case "$s" in *Iconic*) return 0 ;; esac
+    return 1
+}
 
-# Already mapped: focus / minimize only.
-if chrome_window_open; then
-    toggle_chrome_window "$@"
-fi
+active_wid() {
+    xprop -root _NET_ACTIVE_WINDOW 2>/dev/null \
+        | sed -n 's/.*# \(0x[0-9a-fA-F][0-9a-fA-F]*\).*/\1/p' \
+        | head -n 1
+}
 
-# Profile Chrome already running / CDP up (slow first start, or lost the race):
-# wait for the window and toggle — do not clear locks or start another.
-if chrome_profile_running || cdp_ready; then
-    if wait_for_existing_chrome; then
-        toggle_chrome_window "$@"
+window_active() {
+    local wid="$1" a
+    a="$(active_wid)"
+    [ -n "$a" ] || return 1
+    [ "$(wid_dec "$wid")" = "$(wid_dec "$a")" ]
+}
+
+pick_wid() {
+    local wids wid a ad
+    wids="$(list_wids)"
+    [ -n "$wids" ] || return 1
+    a="$(active_wid)"
+    ad=""
+    [ -n "$a" ] && ad="$(wid_dec "$a")"
+    if [ -n "$ad" ] && [ "$ad" != "0" ]; then
+        for wid in $wids; do
+            [ "$(wid_dec "$wid")" = "$ad" ] && { printf '%s\n' "$wid"; return 0; }
+        done
     fi
-    echo "launch-chrome-cdp: Chrome profile already active; not starting another" >&2
+    for wid in $wids; do
+        window_hidden "$wid" && { printf '%s\n' "$wid"; return 0; }
+    done
+    printf '%s\n' "$wids" | head -n 1
+}
+
+minimize_wid() {
+    local wid="$1"
+    wmctrl -i -r "$wid" -b add,hidden 2>/dev/null \
+        || xdotool windowminimize "$(wid_dec "$wid")" 2>/dev/null
+}
+
+restore_wid() {
+    local wid="$1"
+    wmctrl -i -r "$wid" -b remove,hidden 2>/dev/null || true
+    wmctrl -ia "$wid" 2>/dev/null \
+        || wmctrl -i -a "$wid" 2>/dev/null \
+        || xdotool windowactivate "$(wid_dec "$wid")" 2>/dev/null
+}
+
+# --- starting lock (TTL) ---------------------------------------------------
+
+starting_lock_held() {
+    [ -f "$START_LOCK" ] || return 1
+    local now mtime age
+    now="$(date +%s)"
+    mtime="$(stat -c %Y "$START_LOCK" 2>/dev/null || echo 0)"
+    age=$((now - mtime))
+    if [ "$age" -gt "$START_LOCK_TTL_SECS" ]; then
+        rm -f "$START_LOCK"
+        return 1
+    fi
+    return 0
+}
+
+acquire_starting_lock() {
+    # mkdir is atomic; directory = lock.
+    if mkdir "$START_LOCK" 2>/dev/null; then
+        return 0
+    fi
+    if ! starting_lock_held; then
+        # Stale file left by older versions, or empty conflict — retry once.
+        rm -rf "$START_LOCK" 2>/dev/null || true
+        mkdir "$START_LOCK" 2>/dev/null
+        return $?
+    fi
+    return 1
+}
+
+release_starting_lock() {
+    rm -rf "$START_LOCK" 2>/dev/null || true
+}
+
+wait_for_wid() {
+    local max="${1:-60}" i=0
+    while [ "$i" -lt "$max" ]; do
+        if list_wids | grep -q .; then
+            return 0
+        fi
+        i=$((i + 1))
+        sleep 0.25
+    done
+    return 1
+}
+
+# --- actions ---------------------------------------------------------------
+
+toggle_existing_window() {
+    local wid
+    wid="$(pick_wid)" || return 1
+    if window_hidden "$wid" || ! window_active "$wid"; then
+        restore_wid "$wid" || true
+    else
+        minimize_wid "$wid" || true
+    fi
+    return 0
+}
+
+cold_start() {
+    prepare_chrome_profile
+    clear_stale_chrome_cdp
+    mkdir -p /opt/log/chrome-cdp
+    nohup "$HOME/.local/bin/chrome-cdp" \
+        --no-first-run --no-default-browser-check ${1+"$@"} \
+        >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
+    echo $! >"$HOME/.config/chrome-cdp.pid"
+
+    local i=0
+    while [ "$i" -lt 30 ]; do
+        cdp_ready && break
+        i=$((i + 1))
+        sleep 1
+    done
+
+    if ! cdp_ready; then
+        release_starting_lock
+        echo "Chrome CDP did not come up on 127.0.0.1:9222" >&2
+        exit 1
+    fi
+
+    wait_for_wid 40 || true
+    attach_playwright_cdp || true
+    release_starting_lock
+}
+
+# --- main ------------------------------------------------------------------
+
+# 1) Window already exists → pure toggle. No locks, no second process.
+if toggle_existing_window; then
     exit 0
 fi
 
-# Cold start: prepare profile, start Chrome (CDP flags in chrome-cdp), attach.
-prepare_chrome_profile
-clear_stale_chrome_cdp
-mkdir -p /opt/log/chrome-cdp
-nohup "$HOME/.local/bin/chrome-cdp" \
-    --no-first-run --no-default-browser-check ${1+"$@"} \
-    >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
-echo $! >"$HOME/.config/chrome-cdp.pid"
-
-i=0
-while [ "$i" -lt 30 ]; do
-    cdp_ready && break
-    i=$((i + 1))
-    sleep 1
-done
-
-if cdp_ready; then
-    attach_playwright_cdp || true
-else
-    echo "Chrome CDP did not come up on 127.0.0.1:9222" >&2
-    exit 1
+# 2) Someone else is starting → wait for window, then toggle/focus.
+if starting_lock_held || profile_running || cdp_ready; then
+    wait_for_wid 80 || true
+    if toggle_existing_window; then
+        exit 0
+    fi
+    # Process/CDP up but still no window: nudge Singleton, do not clear locks.
+    if profile_running || cdp_ready; then
+        nohup "$HOME/.local/bin/chrome-cdp" \
+            --no-first-run --no-default-browser-check \
+            >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
+        wait_for_wid 40 || true
+        toggle_existing_window || true
+        exit 0
+    fi
 fi
+
+# 3) Cold start — only one launcher may hold the starting lock.
+if ! acquire_starting_lock; then
+    wait_for_wid 80 || true
+    toggle_existing_window || true
+    exit 0
+fi
+
+# Re-check after winning the lock (another window may have appeared).
+if toggle_existing_window; then
+    release_starting_lock
+    exit 0
+fi
+if profile_running || cdp_ready; then
+    release_starting_lock
+    wait_for_wid 40 || true
+    toggle_existing_window || true
+    exit 0
+fi
+
+trap release_starting_lock EXIT
+cold_start "$@"
+trap - EXIT
