@@ -9,8 +9,7 @@
      fullscreen paint over the dock (struts alone are not enough).
      Light translucent background (style=color + rgba); capsule shape /
      icon gaps come from gtk-3.0/gtk.css. -->
-<!-- locked: sandbox cannot customize panel / launcher context menus (kiosk). -->
-<channel name="xfce4-panel" version="1.0" locked="*" unlocked="root">
+<channel name="xfce4-panel" version="1.0">
   <property name="configver" type="int" value="2"/>
   <property name="panels" type="array">
     <value type="int" value="2"/>
