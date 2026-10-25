@@ -2,6 +2,8 @@
 # Open xfce4-terminal. Same --title / -T: close existing first, then start fresh.
 # Title-bar minimize button is stripped via Motif WM hints.
 export DISPLAY="${DISPLAY:-:1}"
+export LANG="${LANG:-C.UTF-8}"
+export LC_ALL="${LC_ALL:-$LANG}"
 
 # flags=FUNCTIONS|DECORATIONS; functions/decorations without MINIMIZE
 MOTIF_NO_MINIMIZE="0x3, 0x36, 0x5e, 0x0, 0x0"

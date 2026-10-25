@@ -14,7 +14,8 @@ apt-get install -y --no-install-recommends \
   dbus-x11 x11-utils \
   procps psmisc iproute2 \
   xz-utils \
-  fonts-wqy-zenhei \
+  fonts-wqy-zenhei fonts-wqy-microhei fonts-dejavu-core \
+  locales \
   scrot \
   xdotool \
   wmctrl \
