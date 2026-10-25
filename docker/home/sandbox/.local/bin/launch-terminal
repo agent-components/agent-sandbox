@@ -1,6 +1,101 @@
 #!/bin/sh
-# Panel launcher: single xfce4-terminal (toggle minimize/focus if already open).
-exec /home/sandbox/.local/bin/single-instance \
-  --class Xfce4-terminal \
-  --class xfce4-terminal \
-  -- xfce4-terminal "$@"
+# Open xfce4-terminal. Same --title / -T: close existing first, then start fresh.
+# Title-bar minimize button is stripped via Motif WM hints.
+export DISPLAY="${DISPLAY:-:1}"
+
+# flags=FUNCTIONS|DECORATIONS; functions/decorations without MINIMIZE
+MOTIF_NO_MINIMIZE="0x3, 0x36, 0x5e, 0x0, 0x0"
+
+disable_minimize() {
+  wid="$1"
+  [ -n "$wid" ] || return 0
+  command -v xprop >/dev/null 2>&1 || return 0
+  xprop -id "$wid" -f _MOTIF_WM_HINTS 32c -set _MOTIF_WM_HINTS "$MOTIF_NO_MINIMIZE" 2>/dev/null || true
+}
+
+list_terminal_wids() {
+  wmctrl -lx 2>/dev/null | awk '
+    BEGIN { IGNORECASE = 1 }
+    /\.xfce4-terminal[[:space:]]/ { print $1 }
+  '
+}
+
+list_titled_wids() {
+  [ -n "$TITLE" ] || return 0
+  wmctrl -lx 2>/dev/null | awk -v twant="$TITLE" '
+    BEGIN { IGNORECASE = 1 }
+    {
+      if ($0 !~ /\.[Xx]fce4-terminal[[:space:]]/) next
+      if (index($0, twant) == 0) next
+      print $1
+    }
+  '
+}
+
+strip_minimize_all_terminals() {
+  command -v wmctrl >/dev/null 2>&1 || return 0
+  list_terminal_wids | while read -r wid; do
+    disable_minimize "$wid"
+  done
+}
+
+# Retry briefly so hints apply after the window maps.
+watch_strip_minimize() {
+  i=0
+  while [ "$i" -lt 30 ]; do
+    strip_minimize_all_terminals
+    i=$((i + 1))
+    sleep 0.1
+  done
+}
+
+# Close same-title terminals so old shells/processes do not linger.
+close_titled() {
+  [ -n "$TITLE" ] || return 0
+  command -v wmctrl >/dev/null 2>&1 || return 0
+  list_titled_wids | while read -r wid; do
+    wmctrl -i -c "$wid" 2>/dev/null || true
+  done
+  i=0
+  while [ "$i" -lt 20 ]; do
+    left="$(list_titled_wids | head -n 1)"
+    [ -z "$left" ] && break
+    i=$((i + 1))
+    sleep 0.1
+  done
+  # Still around (e.g. "close?" dialog): force-kill window PIDs.
+  list_titled_wids | while read -r wid; do
+    pid="$(xprop -id "$wid" _NET_WM_PID 2>/dev/null | awk '{print $3}')"
+    if [ -n "$pid" ] && [ "$pid" -gt 1 ] 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+      sleep 0.1
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+  done
+}
+
+TITLE=""
+parse_title() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --title=*)
+        TITLE="${1#--title=}"
+        ;;
+      --title|-T)
+        TITLE="${2:-}"
+        shift
+        ;;
+    esac
+    shift
+  done
+}
+parse_title "$@"
+
+if [ -n "$TITLE" ]; then
+  close_titled
+  xfce4-terminal --dynamic-title-mode=none "$@" &
+else
+  xfce4-terminal "$@" &
+fi
+watch_strip_minimize &
+exit 0
