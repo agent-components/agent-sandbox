@@ -1,4 +1,4 @@
-# agent-sandbox 0.0.2（约 1.71GB）
+# agent-sandbox 0.0.1（约 529.951 MB）
 
 ## 问题与能力
 
