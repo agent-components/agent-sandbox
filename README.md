@@ -39,6 +39,50 @@
 
 `Bookmarks` 为 Chrome 原生 JSON（含 `roots.bookmark_bar` 等）。要重新应用默认书签，需删掉运行时的 `.bookmarks-seeded`（或清空整个 `/opt/google-chrome-cdp`）。
 
+示例（保存为 `Bookmarks` 后挂载或 `COPY` 进种子目录）：
+
+```json
+{
+  "roots": {
+    "bookmark_bar": {
+      "children": [
+        {
+          "name": "示例站点",
+          "type": "url",
+          "url": "https://example.com"
+        },
+        {
+          "name": "文档",
+          "type": "folder",
+          "children": [
+            {
+              "name": "MDN",
+              "type": "url",
+              "url": "https://developer.mozilla.org"
+            }
+          ]
+        }
+      ],
+      "name": "书签栏",
+      "type": "folder"
+    },
+    "other": {
+      "children": [],
+      "name": "其他书签",
+      "type": "folder"
+    },
+    "synced": {
+      "children": [],
+      "name": "移动设备书签",
+      "type": "folder"
+    }
+  },
+  "version": 1
+}
+```
+
+Chrome 会补全 `id` / `guid` / `date_added` 等字段；下游只需保证 `roots` 结构正确即可。
+
 ## 构建
 
 ```bash
@@ -51,6 +95,8 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.1.0 .
 
 ## 运行
 
+### 本地构建的镜像
+
 ```bash
 docker rm -f agent-sandbox-test 2>/dev/null
 docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
@@ -60,6 +106,30 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
   -e CDP_VIEW_TOKEN=local-cdp-token \
   local/agent-sandbox:0.1.0
 ```
+
+### 阿里云公开镜像
+
+命名空间 `agent-components`，仓库 `agent-sandbox`（公开拉取一般无需登录）：
+
+```bash
+docker pull registry.cn-hangzhou.aliyuncs.com/agent-components/agent-sandbox:0.0.1
+
+docker rm -f agent-sandbox-test 2>/dev/null
+docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
+  --security-opt seccomp=unconfined \
+  -p 6080:6080 -p 9333:9333 \
+  -e NOVNC_TOKEN=local-novnc-token \
+  -e CDP_VIEW_TOKEN=local-cdp-token \
+  registry.cn-hangzhou.aliyuncs.com/agent-components/agent-sandbox:0.0.1
+```
+
+可选：挂载自备书签（见上文「下游默认书签」）：
+
+```bash
+  -v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro" \
+```
+
+访问方式与本地镜像相同：桌面 `https://127.0.0.1:6080/...token=local-novnc-token`，Chrome 画面 `http://127.0.0.1:9333/?token=local-cdp-token&click=1`。
 
 ## 环境变量
 
