@@ -38,7 +38,6 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | Chrome 画面 | [http://127.0.0.1:9333/?token=local-cdp-token&click=1](http://127.0.0.1:9333/?token=local-cdp-token&click=1) |
 
 - noVNC 为自签证书，浏览器需放行。
-- 底部 dock：终端 / workspace / Chrome CDP；无 Applications / 时钟 / 用户顶栏。
 - 默认不自动开 Chrome；设 `SANDBOX_AUTO_START_CHROME=1` 可开机自启。
 
 ## 端口
@@ -60,17 +59,15 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 
 ## 默认书签
 
-空 `/opt/google-chrome-cdp` 时会整树克隆种子目录；**持久化 `/opt` 后不会再整树克隆**。若种子含 `Default/Bookmarks`，首次写入后用 `.bookmarks-seeded` 标记，不再覆盖。书签栏是否显示由 `Default/Preferences` 的 `bookmark_bar.show_on_all_tabs` 控制。
-
-下游镜像可 `COPY`，或启动时挂载：
+准备好 Chrome 原生 JSON 文件 `Bookmarks`，启动时挂载（或下游镜像 `COPY`）：
 
 ```bash
 -v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro"
 ```
 
-要重新应用默认书签：删掉运行时的 `.bookmarks-seeded`，或清空 `/opt/google-chrome-cdp`。
+要重新写入默认书签：删掉容器内 `/opt/google-chrome-cdp/.bookmarks-seeded`，或清空 `/opt/google-chrome-cdp` 后重启。
 
-`Bookmarks` 为 Chrome 原生 JSON。示例：
+示例：
 
 ```json
 {
@@ -111,8 +108,6 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
   "version": 1
 }
 ```
-
-Chrome 会补全 `id` / `guid` / `date_added` 等；保证 `roots` 结构正确即可。
 
 ## 本地构建
 
