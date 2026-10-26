@@ -19,12 +19,15 @@ docker rm -f agent-sandbox-test 2>/dev/null
 docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
   --security-opt seccomp=unconfined \
   -p 6080:6080 -p 9333:9333 \
+  -v agent-sandbox-opt:/opt \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
   registry.cn-hangzhou.aliyuncs.com/agent-components/agent-sandbox:0.0.1
 ```
 
-可选：挂载自备书签（见下方「默认书签」）：
+`-v agent-sandbox-opt:/opt` 把整盘 `/opt` 挂成卷，容器删掉后 Chrome 配置、下载等仍在（见「持久化 `/opt`」）。
+
+可选：再挂自备书签（见「默认书签」）：
 
 ```bash
   -v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro" \
@@ -57,17 +60,36 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | `SANDBOX_DISPLAY_WIDTH` | 否 | 桌面 / Chrome 宽度，默认 `1920` |
 | `SANDBOX_DISPLAY_HEIGHT` | 否 | 桌面 / Chrome 高度，默认 `1080` |
 
+## 持久化 `/opt`
+
+需要保留的数据放在 `/opt` 下，并把整个 `/opt` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
+
+| 路径 | 内容 |
+| ---- | ---- |
+| `/opt/google-chrome-cdp` | Chrome / CDP 用户数据（书签、登录态等） |
+| `/opt/downloads` | 浏览器下载、截图等 |
+
+```bash
+# Docker 命名卷（推荐）
+-v agent-sandbox-opt:/opt
+
+# 或绑到宿主机目录
+-v "$PWD/opt-data:/opt"
+```
+
+工作目录 `/home/workspace` 不在 `/opt` 内；要一并保留请另挂 `-v ...:/home/workspace`。
+
 ## 默认书签
 
-准备好 Chrome 原生 JSON 文件 `Bookmarks`，启动时挂载（或下游镜像 `COPY`）：
+下游镜像可 `COPY`，或启动时挂载：
 
 ```bash
 -v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro"
 ```
 
-要重新写入默认书签：删掉容器内 `/opt/google-chrome-cdp/.bookmarks-seeded`，或清空 `/opt/google-chrome-cdp` 后重启。
+要重新应用默认书签：清空 `/opt/google-chrome-cdp`。
 
-示例：
+`Bookmarks` 为 Chrome 原生 JSON。示例：
 
 ```json
 {
@@ -139,16 +161,3 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.0.1 .
 | `scripts/download-node-dep.sh` | 下载 Node linux-x64 |
 | `Dockerfile` | 镜像构建 |
 | `AGENTS.md` | 给 AI 的容器能力说明 |
-
-## 容器内路径
-
-| 路径 | 说明 |
-| ---- | ---- |
-| `/home/workspace` | 工作目录（`WORKDIR`） |
-| `/home/entrypoint.sh` | 入口 |
-| `/home/sandbox/.local/bin/` | 可执行脚本（如 `launch-chrome-cdp`） |
-| `/home/sandbox/.vnc/` | VNC 相关 |
-| `/usr/local/google/chrome` | Chrome 二进制 |
-| `/usr/local/share/google-chrome-cdp` | CDP 默认配置（种子） |
-| `/opt/google-chrome-cdp` | CDP 运行时 profile |
-| `/opt/downloads` | 下载目录 |
