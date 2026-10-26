@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Local desktop image aligned with boat sandbox layout, username sandbox (uid 1000).
-# Build: docker build --platform linux/amd64 -t local/sandbox-desktop:0.1.0 .
+# Build: docker build --platform linux/amd64 -t local/agent-sandbox:0.1.0 .
 FROM debian:trixie-slim
 
 ARG TARGETARCH

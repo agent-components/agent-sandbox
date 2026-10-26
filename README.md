@@ -1,4 +1,4 @@
-# sandbox-desktop 0.0.2（约 1.71GB）
+# agent-sandbox 0.0.2（约 1.71GB）
 
 ## 问题与能力
 
@@ -42,23 +42,23 @@
 ## 构建
 
 ```bash
-cd ~/docker-sandbox-desktop
+cd ~/Desktop/test/agent-sandbox
 # 若尚无依赖包，先预取（写入 vendor/）：
 ./scripts/download-chrome-dep.sh
 ./scripts/download-node-dep.sh
-docker build --platform linux/amd64 -t local/sandbox-desktop:0.1.0 .
+docker build --platform linux/amd64 -t local/agent-sandbox:0.1.0 .
 ```
 
 ## 运行
 
 ```bash
-docker rm -f sandbox-desktop-test 2>/dev/null
-docker run -d --name sandbox-desktop-test --hostname desktop --shm-size=1g -m 2g \
+docker rm -f agent-sandbox-test 2>/dev/null
+docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
   --security-opt seccomp=unconfined \
   -p 6080:6080 -p 9333:9333 \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
-  local/sandbox-desktop:0.1.0
+  local/agent-sandbox:0.1.0
 ```
 
 ## 环境变量
