@@ -68,6 +68,10 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | ---- | ---- |
 | `/opt/google-chrome-cdp` | Chrome / CDP 用户数据（书签、登录态等） |
 | `/opt/downloads` | 浏览器下载、截图等 |
+| `/opt/log` | noVNC / CDP / Chrome 等运行日志 |
+| `/opt/npm` | npm 全局包与 cache（`cache/`） |
+| `/opt/playwright-cli` | Playwright CLI 输出与 daemon 会话 |
+| `/opt/cursor` | 可选：装 Cursor CLI 后落在这里（`install-cursor-cli.sh`） |
 
 ```bash
 # Docker 命名卷（推荐）
