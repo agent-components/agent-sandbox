@@ -7,15 +7,11 @@ ARG TARGETARCH
 ENV HOME=/home/sandbox \
     USER=sandbox
 
-# sandbox user uid 1000; WORKDIR tree /home/workspace (code only)
+# sandbox user uid 1000; WORKDIR tree /home/workspace (code only).
+# /opt links are created at start by entrypoint → install-opt-links.sh (as root).
 RUN useradd -m -u 1000 -s /bin/bash sandbox \
     && mkdir -p /home/workspace \
-               /opt/downloads \
-               /opt/google-chrome-cdp \
-               /opt/log \
-               /opt/npm/cache \
-               /opt/playwright-cli/daemon \
-    && chown -R sandbox:sandbox /home/sandbox /home/workspace /opt/downloads /opt/google-chrome-cdp /opt/log /opt/npm /opt/playwright-cli
+    && chown -R sandbox:sandbox /home/sandbox /home/workspace
 
 COPY --chown=sandbox:sandbox docker/home/ /home/
 COPY docker/usr/local/share/google-chrome-cdp/ /usr/local/share/google-chrome-cdp/
@@ -33,14 +29,14 @@ RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
  && /tmp/install-chrome.sh \
  && chmod -R a+rX /home/sandbox/.local/bin \
  && chmod 755 /home/sandbox/.vnc/xstartup /home/sandbox/.config/tigervnc/xstartup \
- && chown -R sandbox:sandbox /home/sandbox /usr/local/share/google-chrome-cdp /opt/downloads /opt/log /opt/npm /opt/playwright-cli
+ && chown -R sandbox:sandbox /home/sandbox /home/workspace /usr/local/share/google-chrome-cdp
 
 EXPOSE 6080 9333
 
-USER sandbox
+# Root only so entrypoint can chown a mounted /opt; it then drops to sandbox.
 WORKDIR /home/workspace
-ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:/opt/npm/bin:${PATH}" \
+ENV PATH="/home/sandbox/.local/bin:/home/sandbox/.local/node-v24/bin:${PATH}" \
     DISPLAY=:1 \
-    PLAYWRIGHT_MCP_OUTPUT_DIR=/opt/playwright-cli \
-    PLAYWRIGHT_DAEMON_SESSION_DIR=/opt/playwright-cli/daemon
+    PLAYWRIGHT_MCP_OUTPUT_DIR=/home/sandbox/.playwright-cli \
+    PLAYWRIGHT_DAEMON_SESSION_DIR=/home/sandbox/.cache/ms-playwright/daemon
 ENTRYPOINT ["/home/entrypoint.sh"]

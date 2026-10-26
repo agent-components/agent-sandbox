@@ -5,10 +5,18 @@ export HOME="${HOME:-/home/sandbox}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
-export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-/opt/playwright-cli}"
-export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-/opt/playwright-cli/daemon}"
+# 产物与 daemon 用家目录（符号链接到 /opt），不写工作目录。
+export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-$HOME/.playwright-cli}"
+export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-$HOME/.cache/ms-playwright/daemon}"
 
-CHROME_CDP_DIR="${CHROME_CDP_DIR:-/opt/google-chrome-cdp}"
+# Chrome 默认用户目录。镜像里把它链到 /opt/google-chrome-cdp。
+# Chrome 可能把符号链接解析成 /opt 路径，两种命令行都要认。
+CHROME_CDP_DIR="${CHROME_CDP_DIR:-$HOME/.config/google-chrome}"
+
+chrome_cdp_running() {
+    pgrep -f "user-data-dir=${CHROME_CDP_DIR}" >/dev/null 2>&1 \
+        || pgrep -f "user-data-dir=/opt/google-chrome-cdp" >/dev/null 2>&1
+}
 CHROME_CDP_DEFAULT="${CHROME_CDP_DEFAULT:-/usr/local/share/google-chrome-cdp}"
 
 cdp_ready() {
@@ -56,7 +64,7 @@ seed_chrome_bookmarks_once() {
 
 # Clone baked defaults into /opt when empty; seed Bookmarks at most once afterward.
 prepare_chrome_profile() {
-    mkdir -p /opt/downloads "$CHROME_CDP_DIR"
+    mkdir -p "$HOME/Downloads" "$CHROME_CDP_DIR"
     if chrome_cdp_needs_default "$CHROME_CDP_DIR"; then
         if [ -d "$CHROME_CDP_DEFAULT" ]; then
             echo "Chrome CDP profile empty; cloning default from $CHROME_CDP_DEFAULT -> $CHROME_CDP_DIR" >&2
@@ -67,7 +75,7 @@ prepare_chrome_profile() {
     fi
     seed_chrome_bookmarks_once
     if [ "$(id -u)" = "0" ]; then
-        chown -R sandbox:sandbox /opt/downloads "$CHROME_CDP_DIR" 2>/dev/null || true
+        chown -R sandbox:sandbox /opt/downloads /opt/google-chrome-cdp 2>/dev/null || true
     fi
 }
 
@@ -85,9 +93,10 @@ clear_stale_chrome_cdp() {
     done
     # Best-effort stop of any profile Chrome left without a listening CDP.
     pkill -f "user-data-dir=${CHROME_CDP_DIR}" 2>/dev/null || true
+    pkill -f "user-data-dir=/opt/google-chrome-cdp" 2>/dev/null || true
     local i=0
     while [ "$i" -lt 20 ]; do
-        if ! pgrep -f "user-data-dir=${CHROME_CDP_DIR}" >/dev/null 2>&1; then
+        if ! chrome_cdp_running; then
             break
         fi
         i=$((i + 1))

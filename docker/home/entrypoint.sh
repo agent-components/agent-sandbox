@@ -3,14 +3,20 @@
 # Chrome/CDP: dock on demand, or boot auto-start when SANDBOX_AUTO_START_CHROME=1.
 set -euo pipefail
 
+# Mounted /opt is root-owned; create dirs + home→/opt links, then drop to sandbox.
+if [ "$(id -u)" = "0" ]; then
+    /tmp/install-opt-links.sh
+    exec runuser --preserve-environment -u sandbox -- "$0" "$@"
+fi
+
 export HOME="${HOME:-/home/sandbox}"
 export PATH="$HOME/.local/bin:$PATH"
 export LANG="${LANG:-C.UTF-8}"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
-# .playwright-cli 产物与 daemon 会话落到 /opt，不写 HOME / workspace
-export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-/opt/playwright-cli}"
-export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-/opt/playwright-cli/daemon}"
+# 产物与 daemon 用家目录（符号链接到 /opt），不写工作目录。
+export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-$HOME/.playwright-cli}"
+export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-$HOME/.cache/ms-playwright/daemon}"
 export SANDBOX_DISPLAY_WIDTH="${SANDBOX_DISPLAY_WIDTH:-1920}"
 export SANDBOX_DISPLAY_HEIGHT="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 
@@ -32,13 +38,10 @@ want_auto_start_chrome() {
 
 main() {
     echo "Starting sandbox desktop..."
+    # 日志目录是 ~/.local/state/log → /opt/log，不在卷根上新建程序目录。
+    local log_dir="$HOME/.local/state/log"
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
-        /opt/log/chrome-cdp /opt/log/cdp-view /opt/log/novnc /opt/log/panel \
-        /opt/npm/cache \
-        "$PLAYWRIGHT_MCP_OUTPUT_DIR" "$PLAYWRIGHT_DAEMON_SESSION_DIR"
-    if [ "$(id -u)" = "0" ]; then
-        chown -R sandbox:sandbox /opt/log /opt/npm /opt/playwright-cli
-    fi
+        "$log_dir/chrome-cdp" "$log_dir/cdp-view" "$log_dir/novnc" "$log_dir/panel"
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
         echo "NOVNC_TOKEN is required" >&2
@@ -62,7 +65,7 @@ main() {
     stop_port 9333
     nohup env CDP_VIEW_TOKEN="$CDP_VIEW_TOKEN" \
         "$HOME/.local/bin/node" "$HOME/.local/bin/chrome-cdp-view.mjs" \
-        > /opt/log/cdp-view/cdp-view.log 2>&1 &
+        > "$log_dir/cdp-view/cdp-view.log" 2>&1 &
     echo $! > "$HOME/.config/cdp-view.pid"
 
     if want_auto_start_chrome; then

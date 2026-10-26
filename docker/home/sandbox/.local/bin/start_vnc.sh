@@ -60,13 +60,13 @@ start_websockify() {
     local port="$1"
     local token_file="$2"
     stop_port "$port"
-    mkdir -p /opt/log/novnc
+    mkdir -p "$HOME/.local/state/log/novnc"
     nohup websockify --web="$HOME/.vnc/novnc-web" \
         --cert="$HOME/.vnc/self.crt" --key="$HOME/.vnc/self.key" \
         --token-plugin TokenFile --token-source "$token_file" \
         --heartbeat=30 \
         "0.0.0.0:${port}" \
-        > "/opt/log/novnc/novnc-${port}.log" 2>&1 &
+        > "$HOME/.local/state/log/novnc/novnc-${port}.log" 2>&1 &
     echo $! > "$HOME/.vnc/novnc-${port}.pid"
 }
 
@@ -80,9 +80,9 @@ start_panel_keep_below() {
             kill "$old" 2>/dev/null || true
         fi
     fi
-    mkdir -p /opt/log/panel
+    mkdir -p "$HOME/.local/state/log/panel"
     DISPLAY=:1 nohup "$HOME/.local/bin/panel-keep-below.sh" \
-        > /opt/log/panel/panel-keep-below.log 2>&1 &
+        > "$HOME/.local/state/log/panel/panel-keep-below.log" 2>&1 &
     echo $! > "$HOME/.config/panel-keep-below.pid"
     DISPLAY=:1 "$HOME/.local/bin/panel-keep-below.sh" --once >/dev/null 2>&1 || true
 }

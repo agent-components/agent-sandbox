@@ -26,7 +26,7 @@ mkdir -p "$HOME/.config"
 # --- probes ----------------------------------------------------------------
 
 profile_running() {
-    pgrep -f "user-data-dir=${CHROME_CDP_DIR}" >/dev/null 2>&1
+    chrome_cdp_running
 }
 
 list_wids() {
@@ -155,10 +155,10 @@ toggle_existing_window() {
 cold_start() {
     prepare_chrome_profile
     clear_stale_chrome_cdp
-    mkdir -p /opt/log/chrome-cdp
+    mkdir -p "$HOME/.local/state/log/chrome-cdp"
     nohup "$HOME/.local/bin/chrome-cdp" \
         --no-first-run --no-default-browser-check ${1+"$@"} \
-        >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
+        >>"$HOME/.local/state/log/chrome-cdp/chrome-cdp.log" 2>&1 &
     echo $! >"$HOME/.config/chrome-cdp.pid"
 
     local i=0
@@ -196,7 +196,7 @@ if starting_lock_held || profile_running || cdp_ready; then
     if profile_running || cdp_ready; then
         nohup "$HOME/.local/bin/chrome-cdp" \
             --no-first-run --no-default-browser-check \
-            >>/opt/log/chrome-cdp/chrome-cdp.log 2>&1 &
+            >>"$HOME/.local/state/log/chrome-cdp/chrome-cdp.log" 2>&1 &
         wait_for_wid 40 || true
         toggle_existing_window || true
         exit 0
