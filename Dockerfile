@@ -3,7 +3,6 @@
 # Build: docker build --platform linux/amd64 -t local/agent-sandbox:0.1.0 .
 FROM debian:trixie-slim
 
-ARG TARGETARCH
 ENV HOME=/home/sandbox \
     USER=sandbox
 
