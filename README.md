@@ -52,26 +52,34 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 
 ## 环境变量
 
-| 变量                        | 必需 | 说明                                             |
-| --------------------------- | ---- | ------------------------------------------------ |
-| `NOVNC_TOKEN`               | 是   | noVNC 登录 token；缺则退出                       |
-| `CDP_VIEW_TOKEN`            | 是   | chrome-cdp-view（9333）访问 token；缺则退出      |
-| `SANDBOX_AUTO_START_CHROME` | 否   | `1` 开机执行 `launch-chrome-cdp`；默认不自动启动 |
-| `SANDBOX_DISPLAY_WIDTH`     | 否   | 桌面 / Chrome 宽度，默认 `1920`                  |
-| `SANDBOX_DISPLAY_HEIGHT`    | 否   | 桌面 / Chrome 高度，默认 `1080`                  |
+| 变量                            | 必需 | 说明                                                             |
+| ------------------------------- | ---- | ---------------------------------------------------------------- |
+| `NOVNC_TOKEN`                   | 是   | noVNC 登录 token；缺则退出                                       |
+| `CDP_VIEW_TOKEN`                | 是   | chrome-cdp-view（9333）访问 token；缺则退出                      |
+| `SANDBOX_AUTO_START_CHROME`     | 否   | `1` 开机执行 `launch-chrome-cdp`；默认不自动启动                 |
+| `SANDBOX_DISPLAY_WIDTH`         | 否   | 桌面 / Chrome 宽度，默认 `1920`                                  |
+| `SANDBOX_DISPLAY_HEIGHT`        | 否   | 桌面 / Chrome 高度，默认 `1080`                                  |
+| `LOG_DIR`                       | 否   | 日志目录，默认 `/data/log`                                       |
+| `npm_config_cache`              | 否   | npm cache，默认 `/data/npm`                                      |
+| `npm_config_prefix`             | 否   | `npm i -g` 前缀，默认 `/data/npm-global`                         |
+| `PLAYWRIGHT_MCP_OUTPUT_DIR`     | 否   | Playwright 产物目录，默认 `/data/.playwright-cli`                |
+| `PLAYWRIGHT_DAEMON_SESSION_DIR` | 否   | Playwright daemon 目录，默认 `/data/.cache/ms-playwright/daemon` |
 
 ## 持久化 `/data`
 
 需要保留的数据放在 `/data` 下，并把整个 `/data` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
 
-| 路径                     | 内容                                                                          |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| `/data/google-chrome-cdp` | `~/.config/google-chrome` 的真实存储（Chrome 默认配置目录）                   |
-| `/data/downloads`         | `~/Downloads` 的真实存储（下载、截图）                                        |
-| `/data/log`               | `~/.local/state/log` 的真实存储（noVNC / CDP / Chrome 日志）                  |
-| `/data/npm`               | `~/.npm` 的真实存储（npm 默认 cache）                                         |
-| `/data/playwright-cli`    | `~/.cache/ms-playwright` 的真实存储；`~/.playwright-cli` 指向其中的 `output/` |
-| `/data/cursor`            | 可选：装 Cursor CLI 后落在这里（`install-cursor-cli.sh`）                     |
+| 路径                                | 内容                                                      |
+| ----------------------------------- | --------------------------------------------------------- |
+| `/data/google-chrome`               | Chrome CDP `user-data-dir`（配置、书签等）                |
+| `/data/chrome-cache`                | Chrome `--disk-cache-dir`                                 |
+| `/data/downloads`                   | Chrome 下载目录；截图等也可写这里                         |
+| `/data/log`                         | noVNC / CDP / Chrome 日志（可用 `LOG_DIR` 改）            |
+| `/data/npm`                         | npm cache（`npm_config_cache`）                           |
+| `/data/npm-global`                  | 全局 npm 包（`npm_config_prefix`）                        |
+| `/data/.playwright-cli`             | Playwright 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）            |
+| `/data/.cache/ms-playwright/daemon` | Playwright daemon（`PLAYWRIGHT_DAEMON_SESSION_DIR`）      |
+| `/data/cursor`                      | 可选：装 Cursor CLI 后落在这里（`install-cursor-cli.sh`） |
 
 ```bash
 # Docker 命名卷（推荐）
@@ -91,7 +99,7 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 -v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro"
 ```
 
-要重新应用默认书签：清空 `/data/google-chrome-cdp`。
+要重新应用默认书签：清空 `/data/google-chrome`。
 
 `Bookmarks` 为 Chrome 原生 JSON。示例：
 
@@ -152,16 +160,16 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.0.1 .
 
 ## 仓库目录
 
-| 路径                                          | 用途                                                            |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| `docker/root/`                                | → 容器 `/root/`（root 家目录）                                  |
-| `docker/home/entrypoint.sh`                   | → `/home/entrypoint.sh`（调 `start_vnc.sh`；Chrome 按需或自启） |
-| `docker/home/start/`                          | → `/home/start/`（如 `install-cursor-cli.sh`）                  |
-| `docker/root/.local/bin/start_vnc.sh`         | VNC / noVNC / dock                                              |
-| `docker/usr/local/share/google-chrome-cdp/`   | CDP profile 种子（`Preferences`、可选 `Bookmarks`）             |
-| `docker/tmp/`                                 | 构建安装脚本                                                    |
-| `vendor/`                                     | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                |
-| `scripts/download-chrome-dep.sh`              | 下载 Chrome `.deb`                                              |
-| `scripts/download-node-dep.sh`                | 下载 Node linux-x64                                             |
-| `Dockerfile`                                  | 镜像构建                                                        |
-| `AGENTS.md`                                   | 给 AI 的容器能力说明                                            |
+| 路径                                        | 用途                                                            |
+| ------------------------------------------- | --------------------------------------------------------------- |
+| `docker/root/`                              | → 容器 `/root/`（root 家目录）                                  |
+| `docker/home/entrypoint.sh`                 | → `/home/entrypoint.sh`（调 `start_vnc.sh`；Chrome 按需或自启） |
+| `docker/home/start/`                        | → `/home/start/`（如 `install-cursor-cli.sh`）                  |
+| `docker/root/.local/bin/start_vnc.sh`       | VNC / noVNC / dock                                              |
+| `docker/usr/local/share/google-chrome-cdp/` | CDP profile 种子（`Preferences`、可选 `Bookmarks`）             |
+| `docker/tmp/`                               | 构建安装脚本                                                    |
+| `vendor/`                                   | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                |
+| `scripts/download-chrome-dep.sh`            | 下载 Chrome `.deb`                                              |
+| `scripts/download-node-dep.sh`              | 下载 Node linux-x64                                             |
+| `Dockerfile`                                | 镜像构建                                                        |
+| `AGENTS.md`                                 | 给 AI 的容器能力说明                                            |
