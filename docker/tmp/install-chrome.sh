@@ -1,11 +1,5 @@
 #!/bin/sh
-# Build-time: install google-chrome-stable (amd64) and relocate under /usr/local/google/chrome.
 set -eux
-
-if [ "${TARGETARCH:-}" != "amd64" ]; then
-  echo "This image expects TARGETARCH=amd64 (google-chrome-stable). Rebuild with --platform linux/amd64." >&2
-  exit 1
-fi
 
 export DEBIAN_FRONTEND=noninteractive
 /tmp/use-debian-mirror.sh
