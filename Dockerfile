@@ -19,11 +19,12 @@ RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
 EXPOSE 6080 9333
 
 WORKDIR /home/workspace
-ENV PATH="/root/.local/bin:/root/.local/node-v24/bin:${PATH}" \
+ENV PATH="/data/npm-global/bin:/root/.local/bin:/root/.local/node-v24/bin:${PATH}" \
     LANG=C.UTF-8 \
     DISPLAY=:1 \
     LOG_DIR=/data/log \
     npm_config_cache=/data/npm \
+    npm_config_prefix=/data/npm-global \
     PLAYWRIGHT_MCP_OUTPUT_DIR=/data/.playwright-cli \
     PLAYWRIGHT_DAEMON_SESSION_DIR=/data/.cache/ms-playwright/daemon
 ENTRYPOINT ["/home/entrypoint.sh"]

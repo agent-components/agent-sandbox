@@ -3,9 +3,6 @@
 # Chrome/CDP: dock on demand, or boot auto-start when SANDBOX_AUTO_START_CHROME=1.
 set -euo pipefail
 
-# Mounted /data may be empty; create dirs.
-sh /tmp/install-data-links.sh
-
 export SANDBOX_DISPLAY_WIDTH="${SANDBOX_DISPLAY_WIDTH:-1920}"
 export SANDBOX_DISPLAY_HEIGHT="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 
