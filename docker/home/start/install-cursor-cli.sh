@@ -1,53 +1,34 @@
 #!/usr/bin/env bash
-# 把 Cursor CLI 装到 /data/cursor。家目录只保留软链接。
-# 家目录不在持久盘上时，重启后再执行本脚本会把链接补回去；已有版本不会重新下载。
+# 把 Cursor CLI 装到 $CURSOR_PREFIX（默认 /data/cursor）。
+# 官方安装脚本写死 ~/.local/share/cursor-agent，只能用软链拐到 /data；
+# 配置/数据靠 CURSOR_CONFIG_DIR / CURSOR_DATA_DIR，不再链 ~/.cursor。
 #
-#   install-cursor-cli.sh              安装或补链接
+#   install-cursor-cli.sh
 #   CURSOR_REINSTALL=1 install-cursor-cli.sh
 
 set -euo pipefail
 
-PREFIX=/data/cursor
+PREFIX="${CURSOR_PREFIX:-/data/cursor}"
 SHARE="$PREFIX/share"
 BIN_DIR="$PREFIX/bin"
-CONFIG_DIR="$PREFIX/config"
-DATA_DIR="$PREFIX/data"
-DOT_CURSOR="$PREFIX/dot-cursor"
+CONFIG_DIR="${CURSOR_CONFIG_DIR:-$PREFIX/config}"
+DATA_DIR="${CURSOR_DATA_DIR:-$PREFIX/data}"
 ENV_FILE="$PREFIX/env.sh"
 
 HOME_DIR="${HOME:-/root}"
-LOCAL_SHARE="$HOME_DIR/.local/share"
-LOCAL_AGENT="$LOCAL_SHARE/cursor-agent"
+LOCAL_AGENT="$HOME_DIR/.local/share/cursor-agent"
 LOCAL_BIN="$HOME_DIR/.local/bin"
-HOME_CURSOR="$HOME_DIR/.cursor"
 
-mkdir -p "$SHARE" "$BIN_DIR" "$CONFIG_DIR" "$DATA_DIR" "$DOT_CURSOR" "$LOCAL_SHARE" "$LOCAL_BIN"
+mkdir -p "$SHARE" "$BIN_DIR" "$CONFIG_DIR" "$DATA_DIR" \
+  "$(dirname "$LOCAL_AGENT")" "$LOCAL_BIN"
 
-# 家目录里如果已经有一份真目录，先挪到 /data，再换成软链接。
-move_into_prefix() {
-  local source="$1"
-  local target="$2"
-  if [[ -L "$source" || ! -e "$source" ]]; then
-    return 0
-  fi
-  if [[ -d "$source" ]]; then
-    shopt -s dotglob nullglob
-    local entry
-    for entry in "$source"/*; do
-      mv "$entry" "$target/"
-    done
-    shopt -u dotglob nullglob
-    rmdir "$source"
-    return 0
-  fi
-  echo "无法迁移，路径已存在且不是目录: $source" >&2
-  exit 1
-}
-
-move_into_prefix "$LOCAL_AGENT" "$SHARE"
-move_into_prefix "$HOME_CURSOR" "$DOT_CURSOR"
+# /data 已挂载；官方安装器只认此路径，直接链到卷上。
 ln -sfn "$SHARE" "$LOCAL_AGENT"
-ln -sfn "$DOT_CURSOR" "$HOME_CURSOR"
+
+export CURSOR_PREFIX="$PREFIX"
+export CURSOR_CONFIG_DIR="$CONFIG_DIR"
+export CURSOR_DATA_DIR="$DATA_DIR"
+export PATH="$BIN_DIR:$PATH"
 
 latest_agent() {
   local dir mtime latest latest_mtime
@@ -84,9 +65,10 @@ ln -sfn "$BIN_DIR/agent" "$LOCAL_BIN/agent"
 ln -sfn "$BIN_DIR/cursor-agent" "$LOCAL_BIN/cursor-agent"
 
 cat >"$ENV_FILE" <<EOF
-export PATH="$BIN_DIR:\$PATH"
+export CURSOR_PREFIX="$PREFIX"
 export CURSOR_CONFIG_DIR="$CONFIG_DIR"
 export CURSOR_DATA_DIR="$DATA_DIR"
+export PATH="$BIN_DIR:\$PATH"
 EOF
 
 for rc in "$HOME_DIR/.bashrc" "$HOME_DIR/.profile"; do

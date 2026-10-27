@@ -69,17 +69,17 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 
 需要保留的数据放在 `/data` 下，并把整个 `/data` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
 
-| 路径                                | 内容                                                      |
-| ----------------------------------- | --------------------------------------------------------- |
-| `/data/google-chrome`               | Chrome CDP `user-data-dir`（配置、书签等）                |
-| `/data/chrome-cache`                | Chrome `--disk-cache-dir`                                 |
-| `/data/downloads`                   | Chrome 下载目录；截图等也可写这里                         |
-| `/data/log`                         | noVNC / CDP / Chrome 日志（可用 `LOG_DIR` 改）            |
-| `/data/npm`                         | npm cache（`npm_config_cache`）                           |
-| `/data/npm-global`                  | 全局 npm 包（`npm_config_prefix`）                        |
-| `/data/.playwright-cli`             | Playwright 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）            |
-| `/data/.cache/ms-playwright/daemon` | Playwright daemon（`PLAYWRIGHT_DAEMON_SESSION_DIR`）      |
-| `/data/cursor`                      | 可选：装 Cursor CLI 后落在这里（`install-cursor-cli.sh`） |
+| 路径                                | 内容                                                 |
+| ----------------------------------- | ---------------------------------------------------- |
+| `/data/google-chrome`               | Chrome CDP `user-data-dir`（配置、书签等）           |
+| `/data/chrome-cache`                | Chrome `--disk-cache-dir`                            |
+| `/data/downloads`                   | Chrome 下载目录；截图等也可写这里                    |
+| `/data/log`                         | noVNC / CDP / Chrome 日志（可用 `LOG_DIR` 改）       |
+| `/data/npm`                         | npm cache（`npm_config_cache`）                      |
+| `/data/npm-global`                  | 全局 npm 包（`npm_config_prefix`）                   |
+| `/data/.playwright-cli`             | Playwright 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）       |
+| `/data/.cache/ms-playwright/daemon` | Playwright daemon（`PLAYWRIGHT_DAEMON_SESSION_DIR`） |
+| `/data/cursor`                      | 可选：跑 `install-cursor-cli.sh` 后写入（含 env.sh） |
 
 ```bash
 # Docker 命名卷（推荐）
