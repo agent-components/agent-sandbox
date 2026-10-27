@@ -1,6 +1,4 @@
 #!/bin/sh
-# Build-time: install Google Chrome. Deb lands in /opt/google/chrome (FHS);
-# persistence is /data at runtime, so Chrome can stay in /opt — no relocate.
 set -eux
 
 export DEBIAN_FRONTEND=noninteractive
