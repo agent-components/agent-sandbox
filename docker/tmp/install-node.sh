@@ -5,16 +5,16 @@
 set -eux
 
 NODE_VER=v24.22.0
-NODE_HOME=/home/sandbox/.local/node-v24
+NODE_HOME=/root/.local/node-v24
 NODE_TAR="/mnt/vendor/node-${NODE_VER}-linux-x64.tar.xz"
 
 test -f "$NODE_TAR"
 mkdir -p "$NODE_HOME"
 tar -xJf "$NODE_TAR" -C "$NODE_HOME" --strip-components=1
-ln -sf "$NODE_HOME/bin/node" /home/sandbox/.local/bin/node
-ln -sf "$NODE_HOME/bin/npm" /home/sandbox/.local/bin/npm
-ln -sf "$NODE_HOME/bin/npx" /home/sandbox/.local/bin/npx
-export PATH="/home/sandbox/.local/bin:$PATH"
+ln -sf "$NODE_HOME/bin/node" /root/.local/bin/node
+ln -sf "$NODE_HOME/bin/npm" /root/.local/bin/npm
+ln -sf "$NODE_HOME/bin/npx" /root/.local/bin/npx
+export PATH="/root/.local/bin:$PATH"
 
 node --version
 npm --version

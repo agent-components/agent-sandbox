@@ -1,7 +1,7 @@
 #!/bin/bash
 # Shared Chrome CDP helpers (entrypoint + launch-chrome-cdp). Source only; do not exec.
 
-export HOME="${HOME:-/home/sandbox}"
+export HOME="${HOME:-/root}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
@@ -74,9 +74,6 @@ prepare_chrome_profile() {
         fi
     fi
     seed_chrome_bookmarks_once
-    if [ "$(id -u)" = "0" ]; then
-        chown -R sandbox:sandbox /opt/downloads /opt/google-chrome-cdp 2>/dev/null || true
-    fi
 }
 
 # Drop leftover Chrome/CDP before a cold start (no auto-restart monitor).

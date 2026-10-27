@@ -1,7 +1,7 @@
 #!/bin/sh
 # Panel launcher: single Thunar on /home/workspace (toggle minimize/focus if open).
 # Title match avoids Thunar --daemon / unrelated folders (e.g. "workspace - Thunar").
-exec /home/sandbox/.local/bin/single-instance \
+exec /root/.local/bin/single-instance \
   --class Thunar \
   --title workspace \
   -- thunar /home/workspace "$@"

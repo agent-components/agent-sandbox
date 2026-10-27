@@ -1,11 +1,11 @@
 #!/bin/sh
-# Run as root from entrypoint before dropping to sandbox.
+# Run as root from entrypoint.
 # Default program paths become symlinks; real files live under /opt.
 # If a default path is already a real directory, move its contents into
 # /opt first — ln alone does not migrate data.
 set -eu
 
-HOME_DIR=/home/sandbox
+HOME_DIR=/root
 
 # Move an existing real directory into $target, then replace $source with a symlink.
 link_to_opt() {
@@ -46,18 +46,3 @@ link_to_opt "$HOME_DIR/.local/state/log" /opt/log
 link_to_opt "$HOME_DIR/.npm" /opt/npm
 link_to_opt "$HOME_DIR/.cache/ms-playwright" /opt/playwright-cli
 link_to_opt "$HOME_DIR/.playwright-cli" /opt/playwright-cli/output
-
-chown sandbox:sandbox /opt
-chown -R sandbox:sandbox \
-  /opt/downloads \
-  /opt/google-chrome-cdp \
-  /opt/log \
-  /opt/npm \
-  /opt/playwright-cli
-chown -h sandbox:sandbox \
-  "$HOME_DIR/Downloads" \
-  "$HOME_DIR/.config/google-chrome" \
-  "$HOME_DIR/.local/state/log" \
-  "$HOME_DIR/.npm" \
-  "$HOME_DIR/.cache/ms-playwright" \
-  "$HOME_DIR/.playwright-cli"

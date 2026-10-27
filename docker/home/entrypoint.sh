@@ -3,13 +3,10 @@
 # Chrome/CDP: dock on demand, or boot auto-start when SANDBOX_AUTO_START_CHROME=1.
 set -euo pipefail
 
-# Mounted /opt is root-owned; create dirs + home→/opt links, then drop to sandbox.
-if [ "$(id -u)" = "0" ]; then
-    /tmp/install-opt-links.sh
-    exec runuser --preserve-environment -u sandbox -- "$0" "$@"
-fi
+# Mounted /opt may be empty; create dirs + home→/opt links.
+/tmp/install-opt-links.sh
 
-export HOME="${HOME:-/home/sandbox}"
+export HOME="${HOME:-/root}"
 export PATH="$HOME/.local/bin:$PATH"
 export LANG="${LANG:-C.UTF-8}"
 export DISPLAY="${DISPLAY:-:1}"

@@ -15,7 +15,7 @@ DATA_DIR="$PREFIX/data"
 DOT_CURSOR="$PREFIX/dot-cursor"
 ENV_FILE="$PREFIX/env.sh"
 
-HOME_DIR="${HOME:-/home/sandbox}"
+HOME_DIR="${HOME:-/root}"
 LOCAL_SHARE="$HOME_DIR/.local/share"
 LOCAL_AGENT="$LOCAL_SHARE/cursor-agent"
 LOCAL_BIN="$HOME_DIR/.local/bin"

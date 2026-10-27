@@ -154,10 +154,10 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.0.1 .
 
 | 路径                                          | 用途                                                            |
 | --------------------------------------------- | --------------------------------------------------------------- |
-| `docker/home/sandbox/`                        | → 容器 `/home/sandbox/`                                         |
+| `docker/root/`                                | → 容器 `/root/`（root 家目录）                                  |
 | `docker/home/entrypoint.sh`                   | → `/home/entrypoint.sh`（调 `start_vnc.sh`；Chrome 按需或自启） |
 | `docker/home/start/`                          | → `/home/start/`（如 `install-cursor-cli.sh`）                  |
-| `docker/home/sandbox/.local/bin/start_vnc.sh` | VNC / noVNC / dock                                              |
+| `docker/root/.local/bin/start_vnc.sh`         | VNC / noVNC / dock                                              |
 | `docker/usr/local/share/google-chrome-cdp/`   | CDP profile 种子（`Preferences`、可选 `Bookmarks`）             |
 | `docker/tmp/`                                 | 构建安装脚本                                                    |
 | `vendor/`                                     | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                |

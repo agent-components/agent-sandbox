@@ -4,7 +4,7 @@
 # Called by entrypoint.sh — do not put Chrome CDP logic here.
 set -euo pipefail
 
-export HOME="${HOME:-/home/sandbox}"
+export HOME="${HOME:-/root}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 export SANDBOX_DISPLAY_WIDTH="${SANDBOX_DISPLAY_WIDTH:-1920}"

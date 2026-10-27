@@ -1,7 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Exec=/home/sandbox/.local/bin/launch-workspace
+Exec=/root/.local/bin/launch-workspace
 Icon=folder
 StartupNotify=true
 Terminal=false

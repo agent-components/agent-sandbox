@@ -10,7 +10,7 @@
 # with an mtime TTL so a crashed launcher cannot block forever.
 set -euo pipefail
 
-export HOME="${HOME:-/home/sandbox}"
+export HOME="${HOME:-/root}"
 export PATH="$HOME/.local/bin:$PATH"
 export DISPLAY="${DISPLAY:-:1}"
 
