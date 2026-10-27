@@ -3,7 +3,7 @@
 set -eux
 export DEBIAN_FRONTEND=noninteractive
 
-/tmp/use-debian-mirror.sh
+sh /tmp/use-debian-mirror.sh
 apt-get update
 apt-get install -y --no-install-recommends \
   xfce4 xfce4-terminal thunar \

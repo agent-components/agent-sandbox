@@ -1,0 +1,21 @@
+{
+    "checksum": "",
+    "roots": {
+        "bookmark_bar": {
+            "children": [],
+            "name": "书签栏",
+            "type": "folder"
+        },
+        "other": {
+            "children": [],
+            "name": "其他书签",
+            "type": "folder"
+        },
+        "synced": {
+            "children": [],
+            "name": "移动设备书签",
+            "type": "folder"
+        }
+    },
+    "version": 1
+}

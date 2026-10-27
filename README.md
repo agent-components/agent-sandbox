@@ -19,13 +19,13 @@ docker rm -f agent-sandbox-test 2>/dev/null
 docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
   --security-opt seccomp=unconfined \
   -p 6080:6080 -p 9333:9333 \
-  -v agent-sandbox-opt:/opt \
+  -v agent-sandbox-data:/data \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
   registry.cn-hangzhou.aliyuncs.com/agent-components/agent-sandbox:0.0.1
 ```
 
-`-v agent-sandbox-opt:/opt` 把整盘 `/opt` 挂成卷，容器删掉后 Chrome 配置、下载等仍在（见「持久化 `/opt`」）。
+`-v agent-sandbox-data:/data` 把整盘 `/data` 挂成卷，容器删掉后 Chrome 配置、下载等仍在（见「持久化 `/data`」）。
 
 可选：再挂自备书签（见「默认书签」）：
 
@@ -60,28 +60,28 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | `SANDBOX_DISPLAY_WIDTH`     | 否   | 桌面 / Chrome 宽度，默认 `1920`                  |
 | `SANDBOX_DISPLAY_HEIGHT`    | 否   | 桌面 / Chrome 高度，默认 `1080`                  |
 
-## 持久化 `/opt`
+## 持久化 `/data`
 
-需要保留的数据放在 `/opt` 下，并把整个 `/opt` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
+需要保留的数据放在 `/data` 下，并把整个 `/data` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
 
 | 路径                     | 内容                                                                          |
 | ------------------------ | ----------------------------------------------------------------------------- |
-| `/opt/google-chrome-cdp` | `~/.config/google-chrome` 的真实存储（Chrome 默认配置目录）                   |
-| `/opt/downloads`         | `~/Downloads` 的真实存储（下载、截图）                                        |
-| `/opt/log`               | `~/.local/state/log` 的真实存储（noVNC / CDP / Chrome 日志）                  |
-| `/opt/npm`               | `~/.npm` 的真实存储（npm 默认 cache）                                         |
-| `/opt/playwright-cli`    | `~/.cache/ms-playwright` 的真实存储；`~/.playwright-cli` 指向其中的 `output/` |
-| `/opt/cursor`            | 可选：装 Cursor CLI 后落在这里（`install-cursor-cli.sh`）                     |
+| `/data/google-chrome-cdp` | `~/.config/google-chrome` 的真实存储（Chrome 默认配置目录）                   |
+| `/data/downloads`         | `~/Downloads` 的真实存储（下载、截图）                                        |
+| `/data/log`               | `~/.local/state/log` 的真实存储（noVNC / CDP / Chrome 日志）                  |
+| `/data/npm`               | `~/.npm` 的真实存储（npm 默认 cache）                                         |
+| `/data/playwright-cli`    | `~/.cache/ms-playwright` 的真实存储；`~/.playwright-cli` 指向其中的 `output/` |
+| `/data/cursor`            | 可选：装 Cursor CLI 后落在这里（`install-cursor-cli.sh`）                     |
 
 ```bash
 # Docker 命名卷（推荐）
--v agent-sandbox-opt:/opt
+-v agent-sandbox-data:/data
 
 # 或绑到宿主机目录
--v "$PWD/opt-data:/opt"
+-v "$PWD/data:/data"
 ```
 
-工作目录 `/home/workspace` 不在 `/opt` 内；要一并保留请另挂 `-v ...:/home/workspace`。
+工作目录 `/home/workspace` 不在 `/data` 内；要一并保留请另挂 `-v ...:/home/workspace`。
 
 ## 默认书签
 
@@ -91,7 +91,7 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 -v "$PWD/Bookmarks:/usr/local/share/google-chrome-cdp/Default/Bookmarks:ro"
 ```
 
-要重新应用默认书签：清空 `/opt/google-chrome-cdp`。
+要重新应用默认书签：清空 `/data/google-chrome-cdp`。
 
 `Bookmarks` 为 Chrome 原生 JSON。示例：
 

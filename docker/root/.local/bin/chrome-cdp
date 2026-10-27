@@ -7,7 +7,8 @@ W="${SANDBOX_DISPLAY_WIDTH:-1920}"
 H="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 exec /usr/bin/google-chrome-stable \
   --disable-dev-shm-usage \
-  --user-data-dir="${HOME:-/root}/.config/google-chrome" \
+  --user-data-dir=/data/google-chrome \
+  --disk-cache-dir=/data/chrome-cache \
   --remote-debugging-port=9222 \
   --remote-debugging-address=127.0.0.1 \
   --remote-allow-origins=* \

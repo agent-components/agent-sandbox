@@ -3,17 +3,9 @@
 # Chrome/CDP: dock on demand, or boot auto-start when SANDBOX_AUTO_START_CHROME=1.
 set -euo pipefail
 
-# Mounted /opt may be empty; create dirs + home→/opt links.
-/tmp/install-opt-links.sh
+# Mounted /data may be empty; create dirs.
+sh /tmp/install-data-links.sh
 
-export HOME="${HOME:-/root}"
-export PATH="$HOME/.local/bin:$PATH"
-export LANG="${LANG:-C.UTF-8}"
-export DISPLAY="${DISPLAY:-:1}"
-export PLAYWRIGHT_CLI_SESSION="${PLAYWRIGHT_CLI_SESSION:-default}"
-# 产物与 daemon 用家目录（符号链接到 /opt），不写工作目录。
-export PLAYWRIGHT_MCP_OUTPUT_DIR="${PLAYWRIGHT_MCP_OUTPUT_DIR:-$HOME/.playwright-cli}"
-export PLAYWRIGHT_DAEMON_SESSION_DIR="${PLAYWRIGHT_DAEMON_SESSION_DIR:-$HOME/.cache/ms-playwright/daemon}"
 export SANDBOX_DISPLAY_WIDTH="${SANDBOX_DISPLAY_WIDTH:-1920}"
 export SANDBOX_DISPLAY_HEIGHT="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 
@@ -35,10 +27,8 @@ want_auto_start_chrome() {
 
 main() {
     echo "Starting sandbox desktop..."
-    # 日志目录是 ~/.local/state/log → /opt/log，不在卷根上新建程序目录。
-    local log_dir="$HOME/.local/state/log"
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
-        "$log_dir/chrome-cdp" "$log_dir/cdp-view" "$log_dir/novnc" "$log_dir/panel"
+        "$LOG_DIR/chrome-cdp" "$LOG_DIR/cdp-view" "$LOG_DIR/novnc" "$LOG_DIR/panel"
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
         echo "NOVNC_TOKEN is required" >&2
@@ -62,7 +52,7 @@ main() {
     stop_port 9333
     nohup env CDP_VIEW_TOKEN="$CDP_VIEW_TOKEN" \
         "$HOME/.local/bin/node" "$HOME/.local/bin/chrome-cdp-view.mjs" \
-        > "$log_dir/cdp-view/cdp-view.log" 2>&1 &
+        > "$LOG_DIR/cdp-view/cdp-view.log" 2>&1 &
     echo $! > "$HOME/.config/cdp-view.pid"
 
     if want_auto_start_chrome; then

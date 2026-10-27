@@ -12,7 +12,7 @@
 #
 # Prefers wmctrl; falls back to xdotool. DISPLAY defaults to :1.
 #
-# Note: Chrome CDP sets WM_CLASS instance to "google-chrome (/opt/...)", which
+# Note: Chrome CDP sets WM_CLASS instance to "google-chrome (/data/...)", which
 # contains spaces — never split wmctrl -lx on whitespace for the class field.
 # Multiple --class values are tried in order when several classes may match.
 set -eu

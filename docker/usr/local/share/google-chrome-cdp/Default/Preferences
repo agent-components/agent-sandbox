@@ -2,6 +2,10 @@
   "bookmark_bar": {
     "show_on_all_tabs": true
   },
+  "download": {
+    "default_directory": "/data/downloads",
+    "prompt_for_download": false
+  },
   "extensions": {
     "theme": {
       "system_theme": 0

@@ -12,16 +12,18 @@ COPY docker/tmp/ /tmp/
 RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    chmod 755 /tmp/use-debian-mirror.sh /tmp/install-*.sh \
- && /tmp/install-desktop-apt.sh \
- && /tmp/install-node.sh \
- && /tmp/install-chrome.sh
+    sh /tmp/install-desktop-apt.sh \
+ && sh /tmp/install-node.sh \
+ && sh /tmp/install-chrome.sh
 
 EXPOSE 6080 9333
 
 WORKDIR /home/workspace
 ENV PATH="/root/.local/bin:/root/.local/node-v24/bin:${PATH}" \
+    LANG=C.UTF-8 \
     DISPLAY=:1 \
+    LOG_DIR=/data/log \
+    npm_config_cache=/data/npm \
     PLAYWRIGHT_MCP_OUTPUT_DIR=/data/.playwright-cli \
     PLAYWRIGHT_DAEMON_SESSION_DIR=/data/.cache/ms-playwright/daemon
 ENTRYPOINT ["/home/entrypoint.sh"]

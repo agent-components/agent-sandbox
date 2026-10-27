@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 把 Cursor CLI 装到 /opt/cursor。家目录只保留软链接。
+# 把 Cursor CLI 装到 /data/cursor。家目录只保留软链接。
 # 家目录不在持久盘上时，重启后再执行本脚本会把链接补回去；已有版本不会重新下载。
 #
 #   install-cursor-cli.sh              安装或补链接
@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-PREFIX=/opt/cursor
+PREFIX=/data/cursor
 SHARE="$PREFIX/share"
 BIN_DIR="$PREFIX/bin"
 CONFIG_DIR="$PREFIX/config"
@@ -23,7 +23,7 @@ HOME_CURSOR="$HOME_DIR/.cursor"
 
 mkdir -p "$SHARE" "$BIN_DIR" "$CONFIG_DIR" "$DATA_DIR" "$DOT_CURSOR" "$LOCAL_SHARE" "$LOCAL_BIN"
 
-# 家目录里如果已经有一份真目录，先挪到 /opt，再换成软链接。
+# 家目录里如果已经有一份真目录，先挪到 /data，再换成软链接。
 move_into_prefix() {
   local source="$1"
   local target="$2"

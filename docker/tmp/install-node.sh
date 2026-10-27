@@ -1,6 +1,5 @@
 #!/bin/sh
-# Build-time: install Node 24 under ~/.local/node-v24 + bin symlinks.
-# npm 使用默认 cache（~/.npm）。该路径由镜像链到 /opt/npm，Node 本体仍在家目录。
+# npm cache 由镜像 ENV npm_config_cache=/data/npm 指定；Node 本体在家目录。
 # playwright-cli 不预装，用 npx @playwright/cli 执行。
 set -eux
 

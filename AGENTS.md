@@ -18,7 +18,7 @@ npx --yes @playwright/cli attach --cdp=http://127.0.0.1:9222
 npx --yes @playwright/cli goto https://example.com
 npx --yes @playwright/cli snapshot
 npx --yes @playwright/cli click e3
-npx --yes @playwright/cli screenshot --filename=/opt/downloads/shot.png
+npx --yes @playwright/cli screenshot --filename=/data/downloads/shot.png
 ```
 
 ## 终端
@@ -52,7 +52,7 @@ launch-terminal --title='app' \
 使用 `scrot`。
 
 ```bash
-scrot /opt/downloads/desktop.png
+scrot /data/downloads/desktop.png
 ```
 
 ## 桌面键鼠
