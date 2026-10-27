@@ -12,6 +12,22 @@ test -f "$NODE_TAR"
 mkdir -p "$NODE_HOME" /root/.local/bin
 tar -xJf "$NODE_TAR" -C "$NODE_HOME" --strip-components=1
 
+# 先打好假包（dpkg-deb，不依赖 apt），再卸 Debian nodejs。
+# 若先卸再 apt 装 equivs，novnc 会 broken，apt 直接拒绝。
+DUMMY_DIR=$(mktemp -d)
+mkdir -p "$DUMMY_DIR/DEBIAN"
+cat > "$DUMMY_DIR/DEBIAN/control" <<CTRL
+Package: nodejs
+Version: 24.22.0-local1
+Section: misc
+Priority: optional
+Architecture: all
+Maintainer: agent-sandbox
+Description: Dummy nodejs satisfying novnc; real binary is the official tarball.
+CTRL
+dpkg-deb --build "$DUMMY_DIR" /tmp/nodejs-dummy.deb
+rm -rf "$DUMMY_DIR"
+
 # novnc Depends: nodejs；用 force-depends 只卸 Debian Node，保留 novnc。
 pkgs=$(dpkg-query -W -f='${Package}\n' nodejs 'libnode*' 'node-*' 2>/dev/null || true)
 if [ -n "$pkgs" ]; then
@@ -28,28 +44,8 @@ ln -sfn "$NODE_HOME/bin/node" /root/.local/bin/node
 ln -sfn "$NODE_HOME/bin/npm" /root/.local/bin/npm
 ln -sfn "$NODE_HOME/bin/npx" /root/.local/bin/npx
 
-# 假包顶上 Depends: nodejs，避免后续 apt-get（如装 Chrome）因 broken deps 失败。
-export DEBIAN_FRONTEND=noninteractive
-sh /tmp/use-debian-mirror.sh
-apt-get update
-apt-get install -y --no-install-recommends equivs
-DUMMY_DIR=$(mktemp -d)
-cat > "$DUMMY_DIR/nodejs" <<CTRL
-Section: misc
-Priority: optional
-Standards-Version: 3.9.2
-
-Package: nodejs
-Version: 24.22.0-local1
-Maintainer: agent-sandbox
-Architecture: all
-Description: Dummy nodejs package satisfying novnc; real binary is the official tarball.
-CTRL
-( cd "$DUMMY_DIR" && equivs-build nodejs )
-dpkg -i "$DUMMY_DIR"/nodejs_*.deb
-rm -rf "$DUMMY_DIR"
-apt-get purge -y equivs || true
-apt-get autoremove -y || true
+dpkg -i /tmp/nodejs-dummy.deb
+rm -f /tmp/nodejs-dummy.deb
 
 export PATH="/root/.local/bin:$PATH"
 
