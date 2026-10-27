@@ -12,8 +12,8 @@ COPY docker/tmp/ /tmp/
 RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
     --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    sh /tmp/install-desktop-apt.sh \
- && sh /tmp/install-node.sh \
+    sh /tmp/install-node.sh \
+ && sh /tmp/install-desktop-apt.sh \
  && sh /tmp/install-chrome.sh
 
 EXPOSE 6080 9333
