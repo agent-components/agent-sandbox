@@ -36,6 +36,14 @@ main() {
         exit 1
     fi
 
+    # Cursor CLI 可选：仅当用户曾装过（/data 上留有 env.sh）时恢复家目录软链与 PATH。
+    cursor_env="${CURSOR_PREFIX:-/data/cursor}/env.sh"
+    if [ -f "$cursor_env" ] && [ -x /home/start/install-cursor-cli.sh ]; then
+        # shellcheck source=/dev/null
+        . "$cursor_env"
+        /home/start/install-cursor-cli.sh ensure || true
+    fi
+
     if [ ! -x "$HOME/.local/bin/start_vnc.sh" ]; then
         echo "start_vnc.sh missing at $HOME/.local/bin/start_vnc.sh" >&2
         exit 1
