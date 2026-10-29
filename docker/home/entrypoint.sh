@@ -23,7 +23,7 @@ want_auto_start_chrome() {
 }
 
 main() {
-    echo "Starting sandbox desktop..."
+    echo "Starting agent sandbox..."
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
         "$LOG_DIR/chrome-cdp" "$LOG_DIR/cdp-view" "$LOG_DIR/novnc" "$LOG_DIR/panel"
 
