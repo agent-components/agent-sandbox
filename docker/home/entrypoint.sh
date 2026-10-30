@@ -25,7 +25,8 @@ want_auto_start_chrome() {
 main() {
     echo "Starting agent sandbox..."
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
-        "$LOG_DIR/chrome-cdp" "$LOG_DIR/cdp-view" "$LOG_DIR/novnc" "$LOG_DIR/panel"
+        "$LOG_DIR/chrome-cdp" "$LOG_DIR/cdp-view" "$LOG_DIR/novnc" "$LOG_DIR/panel" \
+        "$LOG_DIR/agent-gateway"
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
         echo "NOVNC_TOKEN is required" >&2
@@ -36,12 +37,13 @@ main() {
         exit 1
     fi
 
-    # Cursor CLI 可选：仅当用户曾装过（/data 上留有 env.sh）时恢复家目录软链与 PATH。
-    cursor_env="${CURSOR_PREFIX:-/data/cursor}/env.sh"
-    if [ -f "$cursor_env" ] && [ -x /home/start/install-cursor-cli.sh ]; then
-        # shellcheck source=/dev/null
-        . "$cursor_env"
-        /home/start/install-cursor-cli.sh ensure || true
+    # agent-gateway：镜像构建已 install；此处后台启动（默认 :6090）
+    if [ -f /tmp/install-agent-gateway.sh ]; then
+        echo "Starting agent-gateway..."
+        sh /tmp/install-agent-gateway.sh start
+    else
+        echo "install-agent-gateway.sh missing at /tmp/install-agent-gateway.sh" >&2
+        exit 1
     fi
 
     if [ ! -x "$HOME/.local/bin/start_vnc.sh" ]; then
@@ -73,6 +75,7 @@ main() {
     fi
 
     echo "Public desktop: port 6080"
+    echo "agent-gateway: port ${PORT:-6090}"
 
     while true; do
         sleep 3600

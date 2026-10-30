@@ -7,6 +7,7 @@ Linux 图形桌面容器：浏览器看桌面、Chrome 远程调试、单独查�
 - **桌面**：浏览器打开 noVNC，默认 `1920×1080`
 - **Chrome**：容器内 CDP `127.0.0.1:9222`，供自动化
 - **Chrome 画面**：9333 端口单独查看，可点击操作
+- **agent-gateway**：本机 Agent HTTP 网关（默认 `6090`），开机自启；契约见 [agent-gateway](https://github.com/agent-components/agent-gateway)
 
 ## 快速开始（公开镜像）
 
@@ -18,14 +19,19 @@ docker pull registry.cn-hangzhou.aliyuncs.com/agent-components/agent-sandbox:0.0
 docker rm -f agent-sandbox-test 2>/dev/null
 docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
   --security-opt seccomp=unconfined \
-  -p 6080:6080 -p 9333:9333 \
+  -p 6080:6080 -p 9333:9333 -p 6090:6090 \
   -v agent-sandbox-data:/data \
   -e NOVNC_TOKEN=local-novnc-token \
   -e CDP_VIEW_TOKEN=local-cdp-token \
+  -e CURSOR_API_KEY=cursor_... \
+  -e AGENT_GATEWAY_TOKEN=local-gateway-token \
   registry.cn-hangzhou.aliyuncs.com/agent-components/agent-sandbox:0.0.1
 ```
 
 `-v agent-sandbox-data:/data` 把整盘 `/data` 挂成卷，容器删掉后 Chrome 配置、下载等仍在（见「持久化 `/data`」）。
+
+- `CURSOR_API_KEY`：使用 Cursor provider 时需要；未设则网关仍会启动，但 Cursor 调用不可用。
+- `AGENT_GATEWAY_TOKEN`：API 鉴权；未设时进程会自动生成，见 `/data/log/agent-gateway/agent-gateway.log`。
 
 可选：再挂自备书签（见「默认书签」）：
 
@@ -39,9 +45,11 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 桌面（noVNC） | [https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token](https://127.0.0.1:6080/vnc_lite.html?autoconnect=1&reconnect=1&resize=scale&path=websockify%3Ftoken%3Dlocal-novnc-token) |
 | Chrome 画面   | [http://127.0.0.1:9333/?token=local-cdp-token&click=1](http://127.0.0.1:9333/?token=local-cdp-token&click=1)                                                                                                                                       |
+| agent-gateway | [http://127.0.0.1:6090/](http://127.0.0.1:6090/)（Web 调试页）；机器可读契约 [http://127.0.0.1:6090/openapi.json](http://127.0.0.1:6090/openapi.json)                                                                                              |
 
 - noVNC 为自签证书，浏览器需放行。
 - 默认不自动开 Chrome；设 `SANDBOX_AUTO_START_CHROME=1` 可开机自启。
+- agent-gateway API 需 `Authorization: Bearer <AGENT_GATEWAY_TOKEN>`；接口细节见上游文档。
 
 ## 端口
 
@@ -49,6 +57,7 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | ---- | ------------------------------------- |
 | 6080 | noVNC HTTPS                           |
 | 9333 | chrome-cdp-view MJPEG（需 `?token=`） |
+| 6090 | agent-gateway HTTP（Web UI + API）    |
 
 ## 环境变量
 
@@ -64,22 +73,27 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | `npm_config_prefix`             | 否   | `npm i -g` 前缀，默认 `/data/npm-global`                         |
 | `PLAYWRIGHT_MCP_OUTPUT_DIR`     | 否   | Playwright 产物目录，默认 `/data/.playwright-cli`                |
 | `PLAYWRIGHT_DAEMON_SESSION_DIR` | 否   | Playwright daemon 目录，默认 `/data/.cache/ms-playwright/daemon` |
+| `CURSOR_API_KEY`                | 否   | agent-gateway Cursor provider；未设则该 provider 不可用          |
+| `AGENT_GATEWAY_TOKEN`           | 否   | 网关 API Bearer token；缺省自动生成并写入启动日志                |
+| `AGENT_GATEWAY_CWD`             | 否   | 网关默认工作区，默认 `/home/workspace`                           |
+| `AGENT_GATEWAY_HOME`            | 否   | 网关解压缓存 / 静态资源，默认 `/data/agent-gateway`              |
+| `PORT` / `HOST`                 | 否   | 网关监听，默认 `6090` / `0.0.0.0`                                |
 
 ## 持久化 `/data`
 
 需要保留的数据放在 `/data` 下，并把整个 `/data` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
 
-| 路径                                | 内容                                                        |
-| ----------------------------------- | ----------------------------------------------------------- |
-| `/data/google-chrome`               | Chrome CDP `user-data-dir`（配置、书签等）                  |
-| `/data/chrome-cache`                | Chrome `--disk-cache-dir`                                   |
-| `/data/downloads`                   | Chrome 下载目录；截图等也可写这里                           |
-| `/data/log`                         | noVNC / CDP / Chrome 日志（可用 `LOG_DIR` 改）              |
-| `/data/npm`                         | npm cache（`npm_config_cache`）                             |
-| `/data/npm-global`                  | 全局 npm 包（`npm_config_prefix`）                          |
-| `/data/.playwright-cli`             | Playwright 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）              |
-| `/data/.cache/ms-playwright/daemon` | Playwright daemon（`PLAYWRIGHT_DAEMON_SESSION_DIR`）        |
-| `/data/cursor`                      | 可选：Cursor CLI；有 `env.sh` 时开机自动 ensure，未装则无感 |
+| 路径                                | 内容                                                           |
+| ----------------------------------- | -------------------------------------------------------------- |
+| `/data/google-chrome`               | Chrome CDP `user-data-dir`（配置、书签等）                     |
+| `/data/chrome-cache`                | Chrome `--disk-cache-dir`                                      |
+| `/data/downloads`                   | Chrome 下载目录；截图等也可写这里                              |
+| `/data/log`                         | noVNC / CDP / Chrome / agent-gateway 日志（可用 `LOG_DIR` 改） |
+| `/data/agent-gateway`               | agent-gateway 解压缓存与静态 UI（`AGENT_GATEWAY_HOME`）        |
+| `/data/npm`                         | npm cache（`npm_config_cache`）                                |
+| `/data/npm-global`                  | 全局 npm 包（`npm_config_prefix`）                             |
+| `/data/.playwright-cli`             | Playwright 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）                 |
+| `/data/.cache/ms-playwright/daemon` | Playwright daemon（`PLAYWRIGHT_DAEMON_SESSION_DIR`）           |
 
 ```bash
 # Docker 命名卷（推荐）
@@ -90,6 +104,18 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 ```
 
 工作目录 `/home/workspace` 不在 `/data` 内；要一并保留请另挂 `-v ...:/home/workspace`。
+
+## agent-gateway
+
+构建时把 `docker/tmp/agent-gateway` 装到 `/root/.local/bin/agent-gateway`；容器入口执行 `sh /tmp/install-agent-gateway.sh start` 后台拉起。
+
+```bash
+# 容器内手动控制
+sh /tmp/install-agent-gateway.sh start
+sh /tmp/install-agent-gateway.sh stop
+```
+
+日志：`$LOG_DIR/agent-gateway/agent-gateway.log`。协议与调用示例见 [agent-components/agent-gateway](https://github.com/agent-components/agent-gateway)。
 
 ## 默认书签
 
@@ -160,16 +186,18 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.0.1 .
 
 ## 仓库目录
 
-| 路径                                        | 用途                                                            |
-| ------------------------------------------- | --------------------------------------------------------------- |
-| `docker/root/`                              | → 容器 `/root/`（root 家目录）                                  |
-| `docker/home/entrypoint.sh`                 | → `/home/entrypoint.sh`（调 `start_vnc.sh`；Chrome 按需或自启） |
-| `docker/home/start/`                        | → `/home/start/`（如 `install-cursor-cli.sh`）                  |
-| `docker/root/.local/bin/start_vnc.sh`       | VNC / noVNC / dock                                              |
-| `docker/usr/local/share/google-chrome-cdp/` | CDP profile 种子（`Preferences`、可选 `Bookmarks`）             |
-| `docker/tmp/`                               | 构建安装脚本                                                    |
-| `vendor/`                                   | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                |
-| `scripts/download-chrome-dep.sh`            | 下载 Chrome `.deb`                                              |
-| `scripts/download-node-dep.sh`              | 下载 Node linux-x64                                             |
-| `Dockerfile`                                | 镜像构建                                                        |
-| `AGENTS.md`                                 | 给 AI 的容器能力说明                                            |
+| 路径                                        | 用途                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------- |
+| `docker/root/`                              | → 容器 `/root/`（root 家目录）                                    |
+| `docker/home/entrypoint.sh`                 | → `/home/entrypoint.sh`（agent-gateway + VNC；Chrome 按需或自启） |
+| `docker/home/start/`                        | → `/home/start/`                                                  |
+| `docker/root/.local/bin/start_vnc.sh`       | VNC / noVNC / dock                                                |
+| `docker/usr/local/share/google-chrome-cdp/` | CDP profile 种子（`Preferences`、可选 `Bookmarks`）               |
+| `docker/tmp/agent-gateway`                  | agent-gateway 一键二进制（构建时 install）                        |
+| `docker/tmp/install-agent-gateway.sh`       | 安装 / 启停 agent-gateway                                         |
+| `docker/tmp/`                               | 构建安装脚本（Node / 桌面 / Chrome / agent-gateway）              |
+| `vendor/`                                   | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                  |
+| `scripts/download-chrome-dep.sh`            | 下载 Chrome `.deb`                                                |
+| `scripts/download-node-dep.sh`              | 下载 Node linux-x64                                               |
+| `Dockerfile`                                | 镜像构建                                                          |
+| `AGENTS.md`                                 | 给 AI 的容器能力说明                                              |

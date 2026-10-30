@@ -19,7 +19,8 @@ apt-get install -y --no-install-recommends \
   scrot \
   xdotool \
   wmctrl \
-  tzdata
+  tzdata \
+  openssh-server openssh-client
 
 dpkg -l fonts-wqy-zenhei tzdata >/dev/null
 ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime

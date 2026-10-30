@@ -16,7 +16,10 @@ RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
  && sh /tmp/install-desktop-apt.sh \
  && sh /tmp/install-chrome.sh
 
-EXPOSE 6080 9333
+# agent-gateway 一键二进制 → /root/.local/bin（启动由 entrypoint 负责）
+RUN sh /tmp/install-agent-gateway.sh install
+
+EXPOSE 6080 9333 6090
 
 WORKDIR /home/workspace
 ENV PATH="/data/npm-global/bin:/root/.local/bin:/root/.local/node-v24/bin:${PATH}" \
