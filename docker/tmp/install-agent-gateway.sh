@@ -47,7 +47,6 @@ is_running() {
       return 0
     fi
   fi
-  # 兜底：按监听端口判断
   if command -v ss >/dev/null 2>&1; then
     ss -ltn "sport = :${PORT}" 2>/dev/null | grep -q LISTEN
     return $?
@@ -60,7 +59,6 @@ stop_gateway() {
     pid="$(cat "$PID_FILE" 2>/dev/null || true)"
     if [ -n "${pid:-}" ]; then
       kill "$pid" 2>/dev/null || true
-      # 给一点时间退出；顽固则强杀
       i=0
       while [ "$i" -lt 20 ] && kill -0 "$pid" 2>/dev/null; do
         i=$((i + 1))
@@ -95,14 +93,22 @@ start_gateway() {
 
   mkdir -p "$LOG_DIR" "$(dirname "$PID_FILE")" "$CACHE_HOME" "$CWD"
 
-  # 自解压产物与静态 UI 落在 AGENT_GATEWAY_HOME
+  # 官方启动器：解压到 AGENT_GATEWAY_HOME，再 node dist/main.js
   export AGENT_GATEWAY_HOME="$CACHE_HOME"
   export AGENT_GATEWAY_CWD="$CWD"
   export PORT HOST
-  # CURSOR_API_KEY / AGENT_GATEWAY_TOKEN / QWEN_API_KEY：若调用方已 export，原样继承
 
+  : >"$LOG_DIR/agent-gateway.log"
   nohup "$BIN" >"$LOG_DIR/agent-gateway.log" 2>&1 &
   echo $! >"$PID_FILE"
+
+  sleep 1
+  if ! kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+    echo "agent-gateway 启动失败，日志：" >&2
+    tail -50 "$LOG_DIR/agent-gateway.log" >&2 || true
+    rm -f "$PID_FILE"
+    exit 1
+  fi
 
   echo "agent-gateway 已启动"
   echo "  pid:  $(cat "$PID_FILE")"
@@ -128,7 +134,6 @@ case "$MODE" in
     ;;
   ensure)
     if [ ! -x "$BIN" ]; then
-      # 未装过则安静跳过
       exit 0
     fi
     start_gateway
