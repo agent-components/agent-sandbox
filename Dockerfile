@@ -16,10 +16,13 @@ RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
  && sh /tmp/install-desktop-apt.sh \
  && sh /tmp/install-chrome.sh
 
+# sshd 配置（openssh-server 已由 install-desktop-apt 安装）
+RUN sh /tmp/install-ssh.sh install
+
 # agent-gateway 一键二进制 → /root/.local/bin（启动由 entrypoint 负责）
 RUN sh /tmp/install-agent-gateway.sh install
 
-EXPOSE 6080 9333 6090
+EXPOSE 6080 9333 6090 22
 
 WORKDIR /home/workspace
 ENV PATH="/data/npm-global/bin:/root/.local/bin:/root/.local/node-v24/bin:${PATH}" \

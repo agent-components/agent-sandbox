@@ -26,7 +26,7 @@ main() {
     echo "Starting agent sandbox..."
     mkdir -p "$HOME/.vnc" "$HOME/.config" \
         "$LOG_DIR/chrome-cdp" "$LOG_DIR/cdp-view" "$LOG_DIR/novnc" "$LOG_DIR/panel" \
-        "$LOG_DIR/agent-gateway"
+        "$LOG_DIR/agent-gateway" "$LOG_DIR/ssh"
 
     if [ -z "${NOVNC_TOKEN:-}" ]; then
         echo "NOVNC_TOKEN is required" >&2
@@ -37,19 +37,12 @@ main() {
         exit 1
     fi
 
-    # agent-gateway：镜像构建已 install；此处后台启动（默认 :6090）
-    if [ -f /tmp/install-agent-gateway.sh ]; then
-        echo "Starting agent-gateway..."
-        sh /tmp/install-agent-gateway.sh start
-    else
-        echo "install-agent-gateway.sh missing at /tmp/install-agent-gateway.sh" >&2
-        exit 1
-    fi
+    echo "Starting sshd..."
+    sh /tmp/install-ssh.sh start
 
-    if [ ! -x "$HOME/.local/bin/start_vnc.sh" ]; then
-        echo "start_vnc.sh missing at $HOME/.local/bin/start_vnc.sh" >&2
-        exit 1
-    fi
+    echo "Starting agent-gateway..."
+    sh /tmp/install-agent-gateway.sh start
+
     "$HOME/.local/bin/start_vnc.sh"
 
     # Profile ready for dock or boot auto-start.
@@ -64,10 +57,6 @@ main() {
 
     if want_auto_start_chrome; then
         echo "SANDBOX_AUTO_START_CHROME enabled; launching Chrome CDP..."
-        if [ ! -x "$HOME/.local/bin/launch-chrome-cdp" ]; then
-            echo "launch-chrome-cdp missing at $HOME/.local/bin/launch-chrome-cdp" >&2
-            exit 1
-        fi
         "$HOME/.local/bin/launch-chrome-cdp"
         echo "Chrome CDP auto-started; view :9333"
     else
@@ -76,6 +65,7 @@ main() {
 
     echo "Public desktop: port 6080"
     echo "agent-gateway: port ${PORT:-6090}"
+    echo "SSH: port ${SSH_PORT:-22} (user root)"
 
     while true; do
         sleep 3600
