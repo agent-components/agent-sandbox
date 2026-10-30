@@ -1,13 +1,10 @@
 .DS_Store
-**/.DS_Store
 *.log
 *.tmp
-*.bak
-*.bak.*
 *~
 .env
 .env.*
 !.env.example
-vendor/*.deb
-vendor/node-*-linux-x64.tar.xz
+vendor/*
 .verify/
+/data
