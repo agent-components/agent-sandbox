@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
     <!--
     noVNC lite page for agent-sandbox (based on Debian novnc 1.6 vnc_lite.html).
 
@@ -10,6 +10,9 @@
     - Clipboard: Ctrl+V and Mac Command+V sync local browser text into the
       remote desktop via Clipboard API / paste event; Command+V also synthesizes
       Ctrl+V so Linux apps paste (Meta+V alone does not).
+    - Upload: drag files onto the desktop, or paste copied files with the
+      same Ctrl/Cmd+V used for text. No persistent control. POST /upload
+      (same NOVNC_TOKEN). Files land under /data/uploads.
 
     Connect parameters are provided in query string:
         http://example.com/?host=HOST&port=PORT&scale=true
@@ -17,147 +20,446 @@
     <title>Desktop</title>
 
     <style>
-        body {
-            margin: 0;
-            background-color: dimgrey;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        html {
-            height: 100%;
-        }
-        #screen {
-            flex: 1;
-            overflow: hidden;
-        }
+      body {
+        margin: 0;
+        background-color: dimgrey;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      html {
+        height: 100%;
+      }
+      #screen {
+        flex: 1;
+        overflow: hidden;
+      }
+      #paste-sink {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        border: 0;
+        padding: 0;
+        resize: none;
+        pointer-events: none;
+      }
+      #drop-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.4);
+        pointer-events: none;
+      }
+      #drop-overlay.visible {
+        display: flex;
+      }
+      .drop-card {
+        min-width: 280px;
+        max-width: 70vw;
+        padding: 28px 36px;
+        border: 2px dashed rgba(255, 255, 255, 0.92);
+        border-radius: 12px;
+        background: rgba(32, 32, 32, 0.88);
+        color: white;
+        text-align: center;
+        font: 16px/1.4 sans-serif;
+      }
+      .drop-card p {
+        margin: 6px 0 0;
+        font-size: 13px;
+        opacity: 0.8;
+      }
+      #toast {
+        display: none;
+        position: fixed;
+        left: 50%;
+        bottom: 88px;
+        transform: translateX(-50%);
+        z-index: 40;
+        background: rgba(32, 32, 32, 0.88);
+        color: white;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font: 13px/1.4 sans-serif;
+        max-width: 70vw;
+        pointer-events: none;
+      }
+      #toast.visible {
+        display: block;
+      }
     </style>
 
     <script type="module" crossorigin="anonymous">
-        import RFB from './core/rfb.js';
+      import RFB from "./core/rfb.js";
 
-        // X11 keysyms used when synthesizing Ctrl+V for Mac Command+V.
-        const XK_Control_L = 0xffe3;
-        const XK_v = 0x0076;
+      // X11 keysyms used when synthesizing Ctrl+V for Mac Command+V.
+      const XK_Control_L = 0xffe3;
+      const XK_v = 0x0076;
 
-        let rfb;
-        let clipSyncing = false;
+      let rfb;
+      let clipSyncing = false;
 
-        function readQueryVariable(name, defaultValue) {
-            const re = new RegExp('.*[?&]' + name + '=([^&#]*)'),
-                  match = document.location.href.match(re);
+      function readQueryVariable(name, defaultValue) {
+        const re = new RegExp(".*[?&]" + name + "=([^&#]*)"),
+          match = document.location.href.match(re);
 
-            if (match) {
-                return decodeURIComponent(match[1]);
-            }
-
-            return defaultValue;
+        if (match) {
+          return decodeURIComponent(match[1]);
         }
 
-        function sendClipboardToServer(text) {
-            if (!rfb || text == null) {
-                return;
-            }
-            rfb.clipboardPasteFrom(String(text));
+        return defaultValue;
+      }
+
+      function sendClipboardToServer(text) {
+        if (!rfb || text == null) {
+          return;
         }
+        rfb.clipboardPasteFrom(String(text));
+      }
 
-        function onServerClipboard(e) {
-            const text = e.detail && e.detail.text != null ? e.detail.text : '';
-            if (navigator.clipboard && navigator.clipboard.writeText && text) {
-                navigator.clipboard.writeText(text).catch(() => {});
-            }
+      function onServerClipboard(e) {
+        const text = e.detail && e.detail.text != null ? e.detail.text : "";
+        if (navigator.clipboard && navigator.clipboard.writeText && text) {
+          navigator.clipboard.writeText(text).catch(() => {});
         }
+      }
 
-        async function syncBrowserClipboardToServer() {
-            if (!rfb || clipSyncing) {
-                return false;
-            }
-            clipSyncing = true;
-            try {
-                if (navigator.clipboard && navigator.clipboard.readText) {
-                    const text = await navigator.clipboard.readText();
-                    if (text) {
-                        sendClipboardToServer(text);
-                        return true;
-                    }
-                }
-            } catch (_) {
-                // Permissions / non-secure context: paste event may still help.
-            } finally {
-                clipSyncing = false;
-            }
-            return false;
+      async function syncBrowserClipboardToServer() {
+        if (!rfb || clipSyncing) {
+          return false;
         }
-
-        // Linux remote pastes on Ctrl+V; Mac Command+V must be translated.
-        function sendRemoteCtrlV() {
-            if (!rfb) {
-                return;
-            }
-            rfb.sendKey(XK_Control_L, 'ControlLeft', true);
-            rfb.sendKey(XK_v, 'KeyV', true);
-            rfb.sendKey(XK_v, 'KeyV', false);
-            rfb.sendKey(XK_Control_L, 'ControlLeft', false);
-        }
-
-        const host = readQueryVariable('host', window.location.hostname);
-        let port = readQueryVariable('port', window.location.port);
-        const password = readQueryVariable('password');
-        const path = readQueryVariable('path', 'websockify');
-
-        let url;
-        if (window.location.protocol === "https:") {
-            url = 'wss';
-        } else {
-            url = 'ws';
-        }
-        url += '://' + host;
-        if (port) {
-            url += ':' + port;
-        }
-        url += '/' + path;
-
-        rfb = new RFB(document.getElementById('screen'), url,
-                      { credentials: { password: password } });
-
-        rfb.addEventListener("clipboard", onServerClipboard);
-
-        rfb.viewOnly = readQueryVariable('view_only', false);
-        rfb.scaleViewport = readQueryVariable('scale', false) ||
-            readQueryVariable('resize', '') === 'scale';
-
-        // Seamless path: sync local clipboard before Ctrl/Cmd+V reaches the remote.
-        // Mac Command+V: intercept, sync, then synthesize Ctrl+V (remote is Linux).
-        // Ctrl+V: sync only; let the native Ctrl+V key events through.
-        window.addEventListener('keydown', (e) => {
-            if (!(e.ctrlKey || e.metaKey)) {
-                return;
-            }
-            if (e.key !== 'v' && e.key !== 'V' && e.code !== 'KeyV') {
-                return;
-            }
-            const isCmdV = e.metaKey && !e.ctrlKey;
-            if (isCmdV) {
-                e.preventDefault();
-                e.stopPropagation();
-                syncBrowserClipboardToServer().then(() => {
-                    sendRemoteCtrlV();
-                });
-                return;
-            }
-            syncBrowserClipboardToServer();
-        }, true);
-
-        window.addEventListener('paste', (e) => {
-            const text = e.clipboardData && e.clipboardData.getData('text/plain');
+        clipSyncing = true;
+        try {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
             if (text) {
-                sendClipboardToServer(text);
+              sendClipboardToServer(text);
+              return true;
             }
-        }, true);
-    </script>
-</head>
+          }
+        } catch (_) {
+          // Permissions / non-secure context: paste event may still help.
+        } finally {
+          clipSyncing = false;
+        }
+        return false;
+      }
 
-<body>
+      // Linux remote pastes on Ctrl+V; Mac Command+V must be translated.
+      function sendRemoteCtrlV() {
+        if (!rfb) {
+          return;
+        }
+        rfb.sendKey(XK_Control_L, "ControlLeft", true);
+        rfb.sendKey(XK_v, "KeyV", true);
+        rfb.sendKey(XK_v, "KeyV", false);
+        rfb.sendKey(XK_Control_L, "ControlLeft", false);
+      }
+
+      const host = readQueryVariable("host", window.location.hostname);
+      let port = readQueryVariable("port", window.location.port);
+      const password = readQueryVariable("password");
+      const path = readQueryVariable("path", "websockify");
+
+      let url;
+      if (window.location.protocol === "https:") {
+        url = "wss";
+      } else {
+        url = "ws";
+      }
+      url += "://" + host;
+      if (port) {
+        url += ":" + port;
+      }
+      url += "/" + path;
+
+      rfb = new RFB(document.getElementById("screen"), url, {
+        credentials: { password: password },
+      });
+
+      rfb.addEventListener("clipboard", onServerClipboard);
+
+      rfb.viewOnly = readQueryVariable("view_only", false);
+      rfb.scaleViewport =
+        readQueryVariable("scale", false) ||
+        readQueryVariable("resize", "") === "scale";
+
+      // Ctrl/Cmd+V: stop noVNC from seeing the chord, then let the browser paste
+      // into #paste-sink. Files upload; text is pushed to the remote clipboard
+      // and applied with Ctrl+V (the desktop is Linux, so Mac Command+V is
+      // translated). If the paste event never arrives, fall back to readText.
+      const pasteSink = document.getElementById("paste-sink");
+      let pasteSeen = false;
+
+      function focusDesktop() {
+        const screen = document.getElementById("screen");
+        const canvas = screen && screen.querySelector("canvas");
+        const el = canvas || screen;
+        if (el && el.focus) {
+          el.focus();
+        }
+      }
+
+      function isPasteChord(e) {
+        if (e.repeat || !(e.ctrlKey || e.metaKey)) {
+          return false;
+        }
+        return e.key === "v" || e.key === "V" || e.code === "KeyV";
+      }
+
+      window.addEventListener(
+        "keydown",
+        (e) => {
+          if (!isPasteChord(e) || e.target === pasteSink) {
+            return;
+          }
+          e.stopPropagation();
+          pasteSeen = false;
+          pasteSink.focus();
+          setTimeout(() => {
+            if (pasteSeen) {
+              return;
+            }
+            syncBrowserClipboardToServer().then((ok) => {
+              if (ok) {
+                sendRemoteCtrlV();
+              }
+              focusDesktop();
+            });
+          }, 0);
+        },
+        true
+      );
+
+      pasteSink.addEventListener("paste", (e) => {
+        pasteSeen = true;
+        const data = e.clipboardData;
+        const files = data && data.files;
+        if (files && files.length) {
+          e.preventDefault();
+          uploadFiles(files);
+          pasteSink.value = "";
+          focusDesktop();
+          return;
+        }
+        const text = data && data.getData("text/plain");
+        if (text) {
+          e.preventDefault();
+          sendClipboardToServer(text);
+          sendRemoteCtrlV();
+        }
+        pasteSink.value = "";
+        focusDesktop();
+      });
+
+      function novncToken() {
+        const path = readQueryVariable("path", "");
+        const match = String(path).match(/(?:^|[?&])token=([^&]*)/);
+        if (match) {
+          return decodeURIComponent(match[1]);
+        }
+        return readQueryVariable("token", "");
+      }
+
+      const toastEl = document.getElementById("toast");
+      let toastTimer = 0;
+
+      function toast(text) {
+        toastEl.textContent = text;
+        toastEl.classList.add("visible");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(
+          () => toastEl.classList.remove("visible"),
+          4000
+        );
+      }
+
+      async function uploadOne(file, rel) {
+        const token = novncToken();
+        const res = await fetch("/upload?token=" + encodeURIComponent(token), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "X-Filename": encodeURIComponent(rel || file.name),
+          },
+          body: file,
+        });
+        if (!res.ok) {
+          throw new Error(String(res.status));
+        }
+        return res.json();
+      }
+
+      function readAllEntries(reader) {
+        return new Promise((resolve, reject) => {
+          const all = [];
+          const read = () => {
+            reader.readEntries((batch) => {
+              if (!batch.length) {
+                resolve(all);
+                return;
+              }
+              all.push.apply(all, batch);
+              read();
+            }, reject);
+          };
+          read();
+        });
+      }
+
+      async function filesFromEntry(entry, prefix) {
+        if (entry.isFile) {
+          const file = await new Promise((resolve, reject) => {
+            entry.file(resolve, reject);
+          });
+          const rel = (prefix + file.name).replace(/^\/+/, "");
+          return [{ file: file, rel: rel }];
+        }
+        if (!entry.isDirectory) {
+          return [];
+        }
+        const children = await readAllEntries(entry.createReader());
+        const nested = prefix + entry.name + "/";
+        const out = [];
+        for (const child of children) {
+          const found = await filesFromEntry(child, nested);
+          out.push.apply(out, found);
+        }
+        return out;
+      }
+
+      async function filesFromDataTransfer(dt) {
+        const items = dt && dt.items ? Array.from(dt.items) : [];
+        const entries = [];
+        for (const item of items) {
+          const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+          if (entry) {
+            entries.push(entry);
+          }
+        }
+        if (!entries.length) {
+          return Array.from((dt && dt.files) || []).map((file) => ({
+            file: file,
+            rel: file.name,
+          }));
+        }
+        const out = [];
+        for (const entry of entries) {
+          if (entry.isFile) {
+            const found = await filesFromEntry(entry, "");
+            out.push.apply(out, found);
+          } else {
+            const found = await filesFromEntry(entry, "");
+            out.push.apply(out, found);
+          }
+        }
+        return out;
+      }
+
+      async function uploadFiles(list) {
+        const items = [];
+        for (const item of Array.from(list || [])) {
+          if (item && item.file) {
+            items.push(item);
+          } else if (item) {
+            items.push({ file: item, rel: item.name });
+          }
+        }
+        if (!items.length) {
+          return;
+        }
+        let saved = 0;
+        let failed = 0;
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          toast("正在上传 " + (i + 1) + "/" + items.length + " " + item.rel);
+          try {
+            await uploadOne(item.file, item.rel);
+            saved += 1;
+          } catch (err) {
+            failed += 1;
+            const code = err && err.message;
+            toast(item.rel + (code === "413" ? " 太大" : " 上传失败"));
+          }
+        }
+        if (saved === 1 && failed === 0) {
+          toast("已保存到 /data/uploads/" + items[0].rel);
+        } else if (saved > 0) {
+          toast(
+            "已保存 " +
+              saved +
+              " 个文件到 /data/uploads" +
+              (failed ? "，" + failed + " 个失败" : "")
+          );
+        }
+      }
+
+      const dropOverlay = document.getElementById("drop-overlay");
+      let dragDepth = 0;
+
+      function isFileDrag(e) {
+        const types = e.dataTransfer && e.dataTransfer.types;
+        if (!types) {
+          return false;
+        }
+        return Array.from(types).indexOf("Files") !== -1;
+      }
+
+      window.addEventListener("dragenter", (e) => {
+        if (!isFileDrag(e)) {
+          return;
+        }
+        e.preventDefault();
+        dragDepth += 1;
+        dropOverlay.classList.add("visible");
+      });
+      window.addEventListener("dragover", (e) => {
+        if (!isFileDrag(e)) {
+          return;
+        }
+        e.preventDefault();
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = "copy";
+        }
+      });
+      window.addEventListener("dragleave", (e) => {
+        if (!isFileDrag(e)) {
+          return;
+        }
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) {
+          dropOverlay.classList.remove("visible");
+        }
+      });
+      window.addEventListener("drop", (e) => {
+        if (!isFileDrag(e)) {
+          return;
+        }
+        e.preventDefault();
+        dragDepth = 0;
+        dropOverlay.classList.remove("visible");
+        filesFromDataTransfer(e.dataTransfer).then((items) => {
+          uploadFiles(items);
+        });
+      });
+    </script>
+  </head>
+
+  <body>
     <div id="screen"></div>
-</body>
+    <textarea id="paste-sink" aria-hidden="true" tabindex="-1" autocomplete="off"></textarea>
+    <div id="drop-overlay">
+      <div class="drop-card">
+        松开以上传
+        <p>保存到 /data/uploads</p>
+      </div>
+    </div>
+    <div id="toast"></div>
+  </body>
 </html>

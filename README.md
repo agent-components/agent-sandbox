@@ -52,6 +52,8 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | SSH           | `ssh -p 2222 root@127.0.0.1`（示例把容器 22 映射到宿主机 2222）                                                                                                                                                                                    |
 
 - noVNC 为自签证书，浏览器需放行。
+- 上传本机文件：把文件拖进桌面，或在桌面里粘贴已复制的文件（Command+V / Ctrl+V，和贴文字同一快捷键）。保存到 `/data/uploads`（随 `/data` 卷保留）。文件管理器侧栏有「上传文件」。
+- 中文输入：本机输入法切到英文，在桌面里按 **Ctrl+Shift**（或短按左侧 Shift）打开拼音。从本机复制的中文可直接 Command+V / Ctrl+V 贴进桌面。
 - 默认不自动开 Chrome；设 `SANDBOX_AUTO_START_CHROME=1` 可开机自启。`launch-chrome-cdp` 只打开 Chrome 并监听容器内 CDP `127.0.0.1:9222`，不会 attach。页面操作由调用方的 `@playwright/mcp`（`--cdp-endpoint=http://127.0.0.1:9222`）负责，可经 agent-gateway 的 `mcpServers` 传入。
 - agent-gateway API 需 `Authorization: Bearer <AGENT_GATEWAY_TOKEN>`；接口细节见上游文档。
 
@@ -85,6 +87,8 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | `SSH_PASSWORD`              | 否\* | root 密码；设置后启用密码登录                            |
 | `SSH_AUTHORIZED_KEYS`       | 否\* | 写入 `/root/.ssh/authorized_keys` 的公钥（可多行）       |
 | `SSH_PORT`                  | 否   | 容器内 sshd 端口，默认 `22`                              |
+| `SANDBOX_UPLOAD_DIR`        | 否   | 页面上传目录，默认 `/data/uploads`                       |
+| `SANDBOX_UPLOAD_MAX_BYTES`  | 否   | 单个上传大小上限，默认 `209715200`（200MB）              |
 
 \* SSH 需密码、环境变量公钥或 `/data/ssh/authorized_keys` 至少一种。
 
@@ -97,6 +101,7 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | `/data/google-chrome`   | Chrome CDP `user-data-dir`（配置、书签等）                     |
 | `/data/chrome-cache`    | Chrome `--disk-cache-dir`                                      |
 | `/data/downloads`       | Chrome 下载目录；截图等也可写这里                              |
+| `/data/uploads`         | 从 noVNC 页面上传的本机文件（`SANDBOX_UPLOAD_DIR`）            |
 | `/data/log`             | noVNC / CDP / Chrome / agent-gateway 日志（可用 `LOG_DIR` 改） |
 | `/data/agent-gateway`   | agent-gateway 解压缓存与静态 UI（`AGENT_GATEWAY_HOME`）        |
 | `/data/ssh`             | SSH 主机密钥 + 可选 `authorized_keys`（换容器后 IDE 少告警）   |

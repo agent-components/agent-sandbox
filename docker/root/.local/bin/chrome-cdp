@@ -3,6 +3,9 @@
 # --class pins WM_CLASS class to Google-chrome-cdp so panel single-instance can
 # match entrypoint and dock launches without relying on the default
 # "Google-chrome" class (instance still embeds user-data-dir and has spaces).
+SANDBOX_WAIT_FOR_SESSION_BUS=1
+# shellcheck source=/dev/null
+. /root/.local/bin/sandbox-gui-env.sh
 W="${SANDBOX_DISPLAY_WIDTH:-1920}"
 H="${SANDBOX_DISPLAY_HEIGHT:-1080}"
 exec /usr/bin/google-chrome-stable \

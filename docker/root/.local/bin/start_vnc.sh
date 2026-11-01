@@ -60,8 +60,8 @@ start_websockify() {
     local port="$1"
     local token_file="$2"
     stop_port "$port"
-    mkdir -p "$LOG_DIR/novnc"
-    nohup websockify --web="$HOME/.vnc/novnc-web" \
+    mkdir -p "$LOG_DIR/novnc" "${SANDBOX_UPLOAD_DIR:-/data/uploads}"
+    nohup "$HOME/.local/bin/novnc-websockify.py" --web="$HOME/.vnc/novnc-web" \
         --cert="$HOME/.vnc/self.crt" --key="$HOME/.vnc/self.key" \
         --token-plugin TokenFile --token-source "$token_file" \
         --heartbeat=30 \
@@ -125,7 +125,7 @@ main() {
     done
 
     start_panel_keep_below
-    echo "Virtual desktop ready: DISPLAY=:1 noVNC=:6080" >&2
+    echo "Virtual desktop ready: DISPLAY=:1 noVNC=:6080 uploads=${SANDBOX_UPLOAD_DIR:-/data/uploads}" >&2
 }
 
 main "$@"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fcitx 5
+Comment=Pinyin input method
+Exec=/root/.local/bin/start-fcitx5.sh
+OnlyShowIn=XFCE;
+X-GNOME-Autostart-Phase=Applications
+X-GNOME-Autostart-enabled=true
