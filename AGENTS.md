@@ -3,16 +3,6 @@
 - Node.js v24.22.0：`node`
 - Python 3.13：`python3`
 
-## SSH / 外部 IDE
-
-容器内 `sshd` 默认监听 `22`（宿主机常见映射 `-p 2222:22`）。用户 `root`，工作区 `/home/workspace`。
-
-认证：`SSH_PASSWORD`、`SSH_AUTHORIZED_KEYS`，或卷内 `/data/ssh/authorized_keys`（至少一种）。
-
-```bash
-ssh -p 2222 root@127.0.0.1
-```
-
 ## 浏览器
 
 `launch-chrome-cdp`：未打开时启动浏览器并打开调试端口 `127.0.0.1:9222`；已在前台时最小化；已最小化或不在前台时恢复到前台。关掉浏览器窗口后，调试端口一并退出。
@@ -21,15 +11,7 @@ ssh -p 2222 root@127.0.0.1
 launch-chrome-cdp
 ```
 
-`npx @playwright/cli` 通过 CDP `http://127.0.0.1:9222` 操作浏览器。
-
-```bash
-npx --yes @playwright/cli attach --cdp=http://127.0.0.1:9222
-npx --yes @playwright/cli goto https://example.com
-npx --yes @playwright/cli snapshot
-npx --yes @playwright/cli click e3
-npx --yes @playwright/cli screenshot --filename=/data/downloads/shot.png
-```
+容器只启动 Chrome 并监听 CDP `http://127.0.0.1:9222`，不会 attach。页面操作用调用方配好的 Playwright MCP（`@playwright/mcp --cdp-endpoint=http://127.0.0.1:9222`）。先执行 `launch-chrome-cdp`，再调用 MCP 工具；工具名以该 MCP 的 `tools/list` 为准。
 
 ## 终端
 
@@ -67,7 +49,7 @@ scrot /data/downloads/desktop.png
 
 ## 桌面键鼠
 
-使用 `xdotool`。页面内操作使用 `npx @playwright/cli`。
+使用 `xdotool`。页面内操作使用 Playwright MCP。
 
 ```bash
 xdotool mousemove 960 540 click 1

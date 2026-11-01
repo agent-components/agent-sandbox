@@ -92,8 +92,3 @@ clear_stale_chrome_cdp() {
         "$CHROME_CDP_DIR/SingletonCookie" \
         "$CHROME_CDP_DIR/SingletonSocket"
 }
-
-attach_playwright_cdp() {
-    npx --yes @playwright/cli detach >/dev/null 2>&1 || true
-    npx --yes @playwright/cli attach --cdp=http://127.0.0.1:9222
-}

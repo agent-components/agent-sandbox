@@ -52,7 +52,7 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | SSH           | `ssh -p 2222 root@127.0.0.1`（示例把容器 22 映射到宿主机 2222）                                                                                                                                                                                    |
 
 - noVNC 为自签证书，浏览器需放行。
-- 默认不自动开 Chrome；设 `SANDBOX_AUTO_START_CHROME=1` 可开机自启。
+- 默认不自动开 Chrome；设 `SANDBOX_AUTO_START_CHROME=1` 可开机自启。`launch-chrome-cdp` 只打开 Chrome 并监听容器内 CDP `127.0.0.1:9222`，不会 attach。页面操作由调用方的 `@playwright/mcp`（`--cdp-endpoint=http://127.0.0.1:9222`）负责，可经 agent-gateway 的 `mcpServers` 传入。
 - agent-gateway API 需 `Authorization: Bearer <AGENT_GATEWAY_TOKEN>`；接口细节见上游文档。
 
 ## 端口
@@ -66,26 +66,25 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 
 ## 环境变量
 
-| 变量                            | 必需 | 说明                                                             |
-| ------------------------------- | ---- | ---------------------------------------------------------------- |
-| `NOVNC_TOKEN`                   | 是   | noVNC 登录 token；缺则退出                                       |
-| `CDP_VIEW_TOKEN`                | 是   | chrome-cdp-view（9333）访问 token；缺则退出                      |
-| `SANDBOX_AUTO_START_CHROME`     | 否   | `1` 开机执行 `launch-chrome-cdp`；默认不自动启动                 |
-| `SANDBOX_DISPLAY_WIDTH`         | 否   | 桌面 / Chrome 宽度，默认 `1920`                                  |
-| `SANDBOX_DISPLAY_HEIGHT`        | 否   | 桌面 / Chrome 高度，默认 `1080`                                  |
-| `LOG_DIR`                       | 否   | 日志目录，默认 `/data/log`                                       |
-| `npm_config_cache`              | 否   | npm cache，默认 `/data/npm`                                      |
-| `npm_config_prefix`             | 否   | `npm i -g` 前缀，默认 `/data/npm-global`                         |
-| `PLAYWRIGHT_MCP_OUTPUT_DIR`     | 否   | Playwright 产物目录，默认 `/data/.playwright-cli`                |
-| `PLAYWRIGHT_DAEMON_SESSION_DIR` | 否   | Playwright daemon 目录，默认 `/data/.cache/ms-playwright/daemon` |
-| `CURSOR_API_KEY`                | 否   | agent-gateway Cursor provider；未设则该 provider 不可用          |
-| `AGENT_GATEWAY_TOKEN`           | 否   | 网关 API Bearer token；缺省自动生成并写入启动日志                |
-| `AGENT_GATEWAY_CWD`             | 否   | 网关默认工作区，默认 `/home/workspace`                           |
-| `AGENT_GATEWAY_HOME`            | 否   | 网关解压缓存 / 静态资源，默认 `/data/agent-gateway`              |
-| `PORT` / `HOST`                 | 否   | 网关监听，默认 `6090` / `0.0.0.0`                                |
-| `SSH_PASSWORD`                  | 否*  | root 密码；设置后启用密码登录                                    |
-| `SSH_AUTHORIZED_KEYS`           | 否*  | 写入 `/root/.ssh/authorized_keys` 的公钥（可多行）               |
-| `SSH_PORT`                      | 否   | 容器内 sshd 端口，默认 `22`                                      |
+| 变量                        | 必需 | 说明                                                     |
+| --------------------------- | ---- | -------------------------------------------------------- |
+| `NOVNC_TOKEN`               | 是   | noVNC 登录 token；缺则退出                               |
+| `CDP_VIEW_TOKEN`            | 是   | chrome-cdp-view（9333）访问 token；缺则退出              |
+| `SANDBOX_AUTO_START_CHROME` | 否   | `1` 开机执行 `launch-chrome-cdp`；默认不自动启动         |
+| `SANDBOX_DISPLAY_WIDTH`     | 否   | 桌面 / Chrome 宽度，默认 `1920`                          |
+| `SANDBOX_DISPLAY_HEIGHT`    | 否   | 桌面 / Chrome 高度，默认 `1080`                          |
+| `LOG_DIR`                   | 否   | 日志目录，默认 `/data/log`                               |
+| `npm_config_cache`          | 否   | npm cache，默认 `/data/npm`                              |
+| `npm_config_prefix`         | 否   | `npm i -g` 前缀，默认 `/data/npm-global`                 |
+| `PLAYWRIGHT_MCP_OUTPUT_DIR` | 否   | `@playwright/mcp` 产物目录，默认 `/data/.playwright-cli` |
+| `CURSOR_API_KEY`            | 否   | agent-gateway Cursor provider；未设则该 provider 不可用  |
+| `AGENT_GATEWAY_TOKEN`       | 否   | 网关 API Bearer token；缺省自动生成并写入启动日志        |
+| `AGENT_GATEWAY_CWD`         | 否   | 网关默认工作区，默认 `/home/workspace`                   |
+| `AGENT_GATEWAY_HOME`        | 否   | 网关解压缓存 / 静态资源，默认 `/data/agent-gateway`      |
+| `PORT` / `HOST`             | 否   | 网关监听，默认 `6090` / `0.0.0.0`                        |
+| `SSH_PASSWORD`              | 否\* | root 密码；设置后启用密码登录                            |
+| `SSH_AUTHORIZED_KEYS`       | 否\* | 写入 `/root/.ssh/authorized_keys` 的公钥（可多行）       |
+| `SSH_PORT`                  | 否   | 容器内 sshd 端口，默认 `22`                              |
 
 \* SSH 需密码、环境变量公钥或 `/data/ssh/authorized_keys` 至少一种。
 
@@ -93,18 +92,17 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 
 需要保留的数据放在 `/data` 下，并把整个 `/data` 挂到卷或宿主机目录，这样换镜像、删容器也不会丢：
 
-| 路径                                | 内容                                                           |
-| ----------------------------------- | -------------------------------------------------------------- |
-| `/data/google-chrome`               | Chrome CDP `user-data-dir`（配置、书签等）                     |
-| `/data/chrome-cache`                | Chrome `--disk-cache-dir`                                      |
-| `/data/downloads`                   | Chrome 下载目录；截图等也可写这里                              |
-| `/data/log`                         | noVNC / CDP / Chrome / agent-gateway 日志（可用 `LOG_DIR` 改） |
-| `/data/agent-gateway`               | agent-gateway 解压缓存与静态 UI（`AGENT_GATEWAY_HOME`）        |
-| `/data/ssh`                         | SSH 主机密钥 + 可选 `authorized_keys`（换容器后 IDE 少告警）   |
-| `/data/npm`                         | npm cache（`npm_config_cache`）                                |
-| `/data/npm-global`                  | 全局 npm 包（`npm_config_prefix`）                             |
-| `/data/.playwright-cli`             | Playwright 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）                 |
-| `/data/.cache/ms-playwright/daemon` | Playwright daemon（`PLAYWRIGHT_DAEMON_SESSION_DIR`）           |
+| 路径                    | 内容                                                           |
+| ----------------------- | -------------------------------------------------------------- |
+| `/data/google-chrome`   | Chrome CDP `user-data-dir`（配置、书签等）                     |
+| `/data/chrome-cache`    | Chrome `--disk-cache-dir`                                      |
+| `/data/downloads`       | Chrome 下载目录；截图等也可写这里                              |
+| `/data/log`             | noVNC / CDP / Chrome / agent-gateway 日志（可用 `LOG_DIR` 改） |
+| `/data/agent-gateway`   | agent-gateway 解压缓存与静态 UI（`AGENT_GATEWAY_HOME`）        |
+| `/data/ssh`             | SSH 主机密钥 + 可选 `authorized_keys`（换容器后 IDE 少告警）   |
+| `/data/npm`             | npm cache（`npm_config_cache`）                                |
+| `/data/npm-global`      | 全局 npm 包（`npm_config_prefix`）                             |
+| `/data/.playwright-cli` | `@playwright/mcp` 产物（`PLAYWRIGHT_MCP_OUTPUT_DIR`）          |
 
 ```bash
 # Docker 命名卷（推荐）
@@ -230,9 +228,9 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.0.1 .
 
 ## 仓库目录
 
-| 路径                                        | 用途                                                              |
-| ------------------------------------------- | ----------------------------------------------------------------- |
-| `docker/root/`                              | → 容器 `/root/`（root 家目录）                                    |
+| 路径                                        | 用途                                                                    |
+| ------------------------------------------- | ----------------------------------------------------------------------- |
+| `docker/root/`                              | → 容器 `/root/`（root 家目录）                                          |
 | `docker/home/entrypoint.sh`                 | → `/home/entrypoint.sh`（SSH + agent-gateway + VNC；Chrome 按需或自启） |
 | `docker/home/start/`                        | → `/home/start/`                                                        |
 | `docker/root/.local/bin/start_vnc.sh`       | VNC / noVNC / dock                                                      |
@@ -241,8 +239,8 @@ docker build --platform linux/amd64 -t local/agent-sandbox:0.0.1 .
 | `docker/tmp/install-agent-gateway.sh`       | 安装 / 启停 agent-gateway                                               |
 | `docker/tmp/install-ssh.sh`                 | 配置 / 启停 sshd（IDE Remote SSH）                                      |
 | `docker/tmp/`                               | 构建安装脚本（Node / 桌面 / Chrome / SSH / agent-gateway）              |
-| `vendor/`                                   | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                  |
-| `scripts/download-chrome-dep.sh`            | 下载 Chrome `.deb`                                                |
-| `scripts/download-node-dep.sh`              | 下载 Node linux-x64                                               |
-| `Dockerfile`                                | 镜像构建                                                          |
-| `AGENTS.md`                                 | 给 AI 的容器能力说明                                              |
+| `vendor/`                                   | 预取的 Chrome / Node 包；构建时 bind，不进镜像层                        |
+| `scripts/download-chrome-dep.sh`            | 下载 Chrome `.deb`                                                      |
+| `scripts/download-node-dep.sh`              | 下载 Node linux-x64                                                     |
+| `Dockerfile`                                | 镜像构建                                                                |
+| `AGENTS.md`                                 | 给 AI 的容器能力说明                                                    |

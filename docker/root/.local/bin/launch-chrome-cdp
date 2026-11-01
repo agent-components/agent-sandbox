@@ -175,7 +175,6 @@ cold_start() {
     fi
 
     wait_for_wid 40 || true
-    attach_playwright_cdp || true
     release_starting_lock
 }
 

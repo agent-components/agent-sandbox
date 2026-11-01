@@ -1,6 +1,6 @@
 #!/bin/sh
 # 第一步装官方 Node（tarball），再打 dummy 包占住 nodejs，避免后面 novnc 拉回 Debian Node。
-# npm cache/prefix 由镜像 ENV 指到 /data；playwright-cli 不预装，用 npx @playwright/cli。
+# npm cache/prefix 由镜像 ENV 指到 /data。页面自动化不预装，由调用方的 @playwright/mcp 连接 CDP。
 set -eux
 
 NODE_VER=v24.22.0
