@@ -196,6 +196,7 @@
       // translated). If the paste event never arrives, fall back to readText.
       const pasteSink = document.getElementById("paste-sink");
       let pasteSeen = false;
+      let swallowPasteKeyup = false;
 
       function focusDesktop() {
         const screen = document.getElementById("screen");
@@ -221,6 +222,7 @@
           }
           e.stopPropagation();
           pasteSeen = false;
+          swallowPasteKeyup = true;
           pasteSink.focus();
           setTimeout(() => {
             if (pasteSeen) {
@@ -232,7 +234,22 @@
               }
               focusDesktop();
             });
-          }, 0);
+          }, 50);
+        },
+        true
+      );
+
+      window.addEventListener(
+        "keyup",
+        (e) => {
+          if (!swallowPasteKeyup) {
+            return;
+          }
+          if (e.key !== "v" && e.key !== "V" && e.code !== "KeyV") {
+            return;
+          }
+          swallowPasteKeyup = false;
+          e.stopPropagation();
         },
         true
       );
@@ -444,16 +461,29 @@
         e.preventDefault();
         dragDepth = 0;
         dropOverlay.classList.remove("visible");
-        filesFromDataTransfer(e.dataTransfer).then((items) => {
-          uploadFiles(items);
-        });
+        filesFromDataTransfer(e.dataTransfer)
+          .then((items) => {
+            if (!items.length) {
+              toast("没有可上传的文件");
+              return;
+            }
+            uploadFiles(items);
+          })
+          .catch(() => {
+            toast("上传失败");
+          });
       });
     </script>
   </head>
 
   <body>
     <div id="screen"></div>
-    <textarea id="paste-sink" aria-hidden="true" tabindex="-1" autocomplete="off"></textarea>
+    <textarea
+      id="paste-sink"
+      aria-hidden="true"
+      tabindex="-1"
+      autocomplete="off"
+    ></textarea>
     <div id="drop-overlay">
       <div class="drop-card">
         松开以上传
