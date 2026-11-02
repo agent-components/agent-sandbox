@@ -54,7 +54,8 @@ launcher_version() {
 
 install_bin() {
   need_src
-  mkdir -p "$BIN_DIR" "$CACHE_HOME" "$LOG_DIR" "$(dirname "$PID_FILE")"
+  # 只装二进制。/data 常被卷盖住，缓存和日志目录留给 start（挂载之后）再建。
+  mkdir -p "$BIN_DIR"
   chmod +x "$SRC"
   # 装到 PATH；源文件仍留在 /tmp（镜像层），运行时走 BIN。
   cp -f "$SRC" "$BIN"

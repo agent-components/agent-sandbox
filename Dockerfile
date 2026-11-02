@@ -19,7 +19,9 @@ RUN --mount=type=bind,source=vendor,target=/mnt/vendor,ro \
 # sshd 配置（openssh-server 已由 install-desktop-apt 安装）
 RUN sh /tmp/install-ssh.sh install
 
-# agent-gateway 一键二进制 → /root/.local/bin（启动由 entrypoint 负责）
+# agent-gateway 一键二进制 → /root/.local/bin。
+# 不在镜像层创建 /data 下的目录：/data 是挂载卷，构建期目录会被盖住。
+# 缓存、日志在 entrypoint 调用 start 时再建。
 RUN sh /tmp/install-agent-gateway.sh install
 
 EXPOSE 6080 9333 6090 22
