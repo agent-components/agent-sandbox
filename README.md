@@ -53,6 +53,7 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 
 - noVNC 为自签证书，浏览器需放行。
 - 上传本机文件：把文件拖进桌面，或在桌面里粘贴已复制的文件（Command+V / Ctrl+V，和贴文字同一快捷键）。保存到 `/data/uploads`（随 `/data` 卷保留）。文件管理器侧栏有「上传文件」。
+- 下载单个文件：在文件管理器里右键该文件，选「下载到本机」。只对一个普通文件出现；多选或文件夹没有这项。文件需在 `/data` 或 `/home/workspace` 下。由桌面页面拉取，中断后从已收到的位置续传，完成后再保存到本机。
 - 中文输入：本机输入法切到英文，在桌面里按 **Ctrl+Shift**（或短按左侧 Shift）打开拼音。从本机复制的中文可直接 Command+V / Ctrl+V 贴进桌面。
 - 默认不自动开 Chrome；设 `SANDBOX_AUTO_START_CHROME=1` 可开机自启。`launch-chrome-cdp` 只打开 Chrome 并监听容器内 CDP `127.0.0.1:9222`，不会 attach。页面操作由调用方的 `@playwright/mcp`（`--cdp-endpoint=http://127.0.0.1:9222`）负责，可经 agent-gateway 的 `mcpServers` 传入。
 - agent-gateway API 需 `Authorization: Bearer <AGENT_GATEWAY_TOKEN>`；接口细节见上游文档。
@@ -88,7 +89,8 @@ docker run -d --name agent-sandbox-test --hostname desktop --shm-size=1g -m 2g \
 | `SSH_AUTHORIZED_KEYS`       | 否\* | 写入 `/root/.ssh/authorized_keys` 的公钥（可多行）                                |
 | `SSH_PORT`                  | 否   | 容器内 sshd 端口，默认 `22`                                                       |
 | `SANDBOX_UPLOAD_DIR`        | 否   | 页面上传目录，默认 `/data/uploads`                                                |
-| `SANDBOX_UPLOAD_MAX_BYTES`  | 否   | 单个上传大小上限，默认 `209715200`（200MB）                                       |
+| `SANDBOX_UPLOAD_MAX_BYTES`  | 否   | 单个上传或下载的大小上限，默认 `209715200`（200MB）                               |
+| `SANDBOX_DOWNLOAD_ROOTS`    | 否   | 允许右键下载的目录，冒号分隔，默认 `/data:/home/workspace`                        |
 
 \* SSH 需密码、环境变量公钥或 `/data/ssh/authorized_keys` 至少一种。
 

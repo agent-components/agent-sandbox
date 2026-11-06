@@ -1,0 +1,67 @@
+#!/bin/sh
+# Ask the noVNC page to download one regular file. Thunar passes %f.
+# The page watches the desktop clipboard for sandbox-download:<path>.
+set -eu
+
+clip() {
+    printf '%s' "$1" | /usr/bin/xclip -selection clipboard -t UTF8_STRING
+}
+
+fail() {
+    clip "sandbox-download-error:$1" || exit 1
+    exit 1
+}
+
+if [ "$#" -ne 1 ]; then
+    fail "一次只能下载一个文件"
+fi
+
+if [ ! -e "$1" ]; then
+    fail "文件不存在"
+fi
+
+path=$(readlink -f -- "$1")
+
+# Command substitution strips trailing newlines, so printf '\n' cannot be used here.
+nl='
+'
+cr=$(printf '\r')
+case "$path" in
+    *"$nl"*|*"$cr"*) fail "文件名无效" ;;
+esac
+
+if [ -d "$path" ]; then
+    fail "不能下载文件夹"
+fi
+
+if [ ! -f "$path" ]; then
+    fail "只能下载普通文件"
+fi
+
+allowed=0
+rest=${SANDBOX_DOWNLOAD_ROOTS:-/data:/home/workspace}
+while [ -n "$rest" ]; do
+    root=${rest%%:*}
+    case "$rest" in
+        *:*) rest=${rest#*:} ;;
+        *) rest= ;;
+    esac
+    root=${root%/}
+    if [ -z "$root" ]; then
+        continue
+    fi
+    real=$(readlink -f -- "$root" 2>/dev/null) || real=$root
+    if [ "$real" = "/" ]; then
+        allowed=1
+        break
+    fi
+    case "$path" in
+        "$real"/*) allowed=1 ;;
+    esac
+done
+
+if [ "$allowed" -ne 1 ]; then
+    fail "这个位置的文件不能下载"
+fi
+
+clip "sandbox-download:$path"

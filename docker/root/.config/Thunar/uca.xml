@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>document-save-as</icon>
+	<name>下载到本机</name>
+	<unique-id>sandbox-download-file</unique-id>
+	<command>/root/.local/bin/sandbox-download %f</command>
+	<description>把这个文件下载到本机</description>
+	<patterns>*</patterns>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+</actions>
